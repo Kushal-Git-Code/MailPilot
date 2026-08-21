@@ -84,7 +84,13 @@ MailPilot/
 
 ## Hard Technical Constraints
 
-- **No email content persistence** — enforced at the query/schema level (see `docs/backend-schema.md` — no `body`/`snippet` column exists at all, not just "unused").
+- **No email content persistence** — enforced at the query/schema level (see `docs/backend-schema.md` — no `body`, `snippet`, `sender`, or `subject` column exists at all, not just "unused"). Sender and subject are fetched live from the Gmail API for every dashboard render.
+
+**Performance strategy (finalized):** two techniques close the speed gap with database-cached competitors *without* storing anything:
+1. **Batched Gmail API calls** — fetch all visible emails' metadata in a single batched request (Gmail API supports this) rather than one call per email. This alone takes a 20-email dashboard load from ~3-5 seconds (naive, sequential) to ~300-600ms.
+2. **In-memory, per-session cache** — after the first batched fetch in a session, hold the results in server RAM (not Redis, not Postgres, not disk) for the duration of that session. Repeat views (refresh, navigate back) read from memory in <50ms. Data is never written anywhere persistent and disappears when the session/process ends.
+
+This is a deliberate architectural decision, not a placeholder — do not "upgrade" this to a database or Redis-backed cache without explicit approval, as that would violate the zero-content-storage hard rule in `CLAUDE.md`.
 - Must respect Gmail API rate limits — backoff/retry logic required in the worker, not naive retry loops.
 - Google OAuth verification review (for `gmail.modify` scope) must be started as soon as the OAuth consent screen is finalized — this is a process constraint, not a code constraint, but it gates real-user launch.
 - Free tier cap (75 emails/day) enforced server-side in the worker, not just as a UI suggestion.
