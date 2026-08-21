@@ -2,13 +2,13 @@
 
 ## Current Status
 Last updated: 2026-08-21
-Currently on: Phase 2, Step 8 — Apply Row Level Security policies per `docs/backend-schema.md` (`user_id = auth.uid()` on every table)
+Currently on: Phase 2, Step 9 — seed one test row per table and verify RLS actually blocks cross-user access (two different auth contexts)
 
 ## Completed
 - [x] Phase 1: Project Setup (Steps 1-6) — `/web` and `/worker` scaffolded, `/shared` wired into both, `.env.example` documented, Supabase project created and connection verified
 - [ ] Phase 2: Database Schema (Steps 7-10) — in progress
   - [x] Step 7: migrations for all 5 tables (`users`, `gmail_tokens`, `emails`, `rules`, `audit_log`) written, applied, and verified against the live DB — including a real up/down/up rollback test, not just written and assumed correct
-  - [ ] Step 8: RLS policies — not started
+  - [x] Step 8: RLS enabled + 20 policies (4 per table, `auth.uid()`-scoped) written in `0006_enable_rls.sql`, applied, and verified against live Postgres system catalogs. Caught and fixed a real bug: `CREATE POLICY` isn't idempotent, which broke a second `npm run migrate` run — fixed with `DROP POLICY IF EXISTS` before each `CREATE POLICY`. Rollback tested in isolation (single-file run, not full `migrate:down`, since that would also drop the tables from 0001-0005) — confirmed it disables RLS and removes all 20 policies without touching the tables, then reapplied to restore.
   - [ ] Step 9: seed + cross-user RLS test — not started
 - [ ] Phase 3: Authentication (Steps 11-14) — not started
 - [ ] Phase 4: Core Feature — Backlog Onboarding & Date Range (Steps 15-17) — not started
@@ -28,3 +28,4 @@ Currently on: Phase 2, Step 8 — Apply Row Level Security policies per `docs/ba
 - `/shared` is wired into `/web` and `/worker` as a local `file:` dependency (`"shared": "file:../shared"` in each `package.json`) — currently just a placeholder type-only import (`Placeholder`), verified resolvable in both. Real shared types (the classification schema) land in Phase 5.
 - `web/.env.local` holds real Supabase credentials and is gitignored (confirmed via `git check-ignore`, both root and `web/.gitignore` cascade correctly). If `DATABASE_URL`'s password contains special characters, they must be percent-encoded (`@`→`%40`, `%`→`%25`, `^`→`%5E`, `&`→`%26`, `(`→`%28`, `$`→`%24`, `)`→`%29`) or the connection string won't parse.
 - Working pattern established this project: every step gets explained before starting, executed, verified (often with a throwaway test script that's deleted afterward), then committed locally — pushed to GitHub only after explicit go-ahead. Destructive actions (e.g. `migrate:down` against the real DB) are confirmed with the user first, even when low-risk.
+- `migrate.mjs` has no applied-migrations tracking — every `npm run migrate` re-runs all up-files from scratch, so each one must stay idempotent (`CREATE TABLE IF NOT EXISTS`, `DROP POLICY IF EXISTS` before `CREATE POLICY`, etc.) or a second run will break. `migrate:down` rolls back *everything* in reverse, including table drops — to test/undo a single migration in isolation, run that one file directly instead (see how the 0006 RLS rollback was tested).
