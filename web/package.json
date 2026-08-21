@@ -11,6 +11,7 @@
     "migrate:down": "node scripts/migrate.mjs down"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "next": "14.2.35",
     "pg": "^8.23.0",
