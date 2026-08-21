@@ -31,7 +31,7 @@ MailPilot is an AI email assistant that connects to a user's Gmail account and a
 *(To be filled in once real code exists and patterns are established — do not invent generic conventions here.)*
 
 ## Hard rules — never do these without asking first
-- **Never store email body content, snippets, or attachments in the database — ever, under any circumstance.** Only metadata (message ID, classification result, label, timestamps) is persisted. Dashboard previews fetch snippets live from the Gmail API on each view; they are never cached or written to Postgres. This is a core product trust commitment, not a performance decision — do not "optimize" it away by adding caching later without explicit approval.
+- **Never store email body content, snippets, sender, subject, or attachments in the database — ever, under any circumstance.** Only IDs, classification results, and timestamps are persisted. Sender, subject, and any preview text are fetched live from the Gmail API at render time, using the stored `gmail_message_id` — never cached or written to Postgres. This is a core product trust commitment, not a performance decision — do not "optimize" it away by adding caching later without explicit approval.
 - **Never** apply more than the single `MailPilot/Priority` label to an email. Category info is dashboard-only, not a Gmail label.
 - **Never** modify, disable, or interact with a user's existing (non-MailPilot) Gmail labels or filters. Fully additive only.
 - **Never** permanently delete a user's email. Archive/label only. Every automated action must be reversible.
@@ -40,6 +40,7 @@ MailPilot is an AI email assistant that connects to a user's Gmail account and a
 - **Never** widen OAuth scopes beyond what's declared in `docs/trd.md` without explicit approval — this affects Google's app verification review.
 - **Never** ship a classification prompt change without running it against `/evals` first and showing the before/after precision/recall.
 - **Always** treat Gmail API rate limits as a hard constraint — implement backoff, don't just retry in a loop.
+- **Always** update `PROGRESS.md` at the end of any session where a step from `docs/implementation-plan.md` was completed or meaningfully advanced — current phase/step, what's done, any blockers. This is the fast way to answer "where are we" even in a brand-new session with no conversation history.
 - **Always** ask before touching authentication, payment, or production data/config.
 
 ## Gotchas (anticipated — validate once building starts)
