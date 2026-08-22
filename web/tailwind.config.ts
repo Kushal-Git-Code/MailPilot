@@ -14,12 +14,18 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // Brand palette — docs/ui-ux-brief.md
-        accent: { DEFAULT: "#4A6B5C", hover: "#3A5548" },
+        // Brand palette — docs/ui-ux-brief.md (2026-08-22 cheerful/colorful revision)
+        accent: { DEFAULT: "#6366F1", hover: "#4F46E5" },
+        secondary: "#FB923C",
+        tertiary: "#2DD4BF",
         surface: "#FFFFFF",
-        "text-secondary": "#6B7268",
-        border: "#E8E4DB",
-        error: "#B3543F",
+        "text-secondary": "#6B7280",
+        border: "#E5E0FF",
+        error: "#EF4444",
+        success: "#22C55E",
+      },
+      boxShadow: {
+        glow: "0 8px 24px rgba(99, 102, 241, 0.15)",
       },
     },
   },

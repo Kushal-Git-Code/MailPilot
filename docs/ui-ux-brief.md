@@ -1,16 +1,18 @@
 # UI/UX Design Brief — MailPilot
 
 **Screen/Flow:** Full app (Phase 1: Inbox dashboard, Onboarding, Settings)
-**Audience:** Knowledge workers/professionals who want their inbox handled with minimal cognitive load — values calm, uncluttered tools (Notion, Superhuman, Linear users).
-**Brand:** Calm, restrained, quietly confident. Not playful, not corporate-cold. The visual opposite of a busy dashboard with competing colors and dense navigation.
+**Audience:** Knowledge workers/professionals who want their inbox handled with minimal cognitive load.
+**Brand:** Cheerful, colorful, and energetic — a tool that feels good to open, not another gray productivity app. Motion and depth do real work here: buttons feel tactile, cards feel like they have weight, transitions feel alive.
+
+> **Revision note (2026-08-22):** This brief previously specified a calm, restrained, single-accent-color direction (Notion/Superhuman as reference). That direction is superseded by this revision, at the user's explicit request, to a colorful, motion-forward, tactile direction. Pages already built under the old direction (`/login`, the Step 11-13 placeholders) will be revisited to match; new pages (starting with Phase 4, Step 15) are built to this revision directly.
 
 ---
 
 ## Aesthetic Direction
 
-Clean light theme, generous whitespace, restrained color use. Color signals *hierarchy* (what's primary vs. secondary), not *category* — this is the core visual principle that separates MailPilot from typical inbox-management dashboards, which tend to color-code everything and end up visually loud. One accent color does the work of drawing attention; everything else recedes.
+Warm, colorful, and dimensional. Where the previous direction used color only for hierarchy, this direction uses color for **personality** too — multiple accent colors, soft gradients, and layered shadows are all in play. Motion is a first-class part of the design, not a subtle accent: buttons respond to hover/press with tilt and depth, cards lift, page transitions carry weight.
 
-**Explicitly avoid:** multiple pastel category colors competing on one screen, dense edge-to-edge cards, more than one focal action per screen, bold headers on every section.
+**Still true from before:** clarity and trust still matter — this is a tool handling someone's real email. Cheerful doesn't mean cluttered; one clear focal action per screen is still the rule, it's just expressed with more color and motion than before.
 
 ---
 
@@ -18,80 +20,75 @@ Clean light theme, generous whitespace, restrained color use. Color signals *hie
 
 | Token | Value | Usage |
 |---|---|---|
-| Primary accent | `#4A6B5C` (deep sage green) | Primary buttons, active nav state, the `Priority` label color, links |
-| Accent hover/pressed | `#3A5548` | Button hover/active states |
-| Background | `#FAF8F3` (warm off-white/cream) | Page background — not stark white |
-| Surface (cards) | `#FFFFFF` | Cards, panels, modals — sits slightly lighter than the page background |
-| Text primary | `#1F2421` | Headings, primary body text |
-| Text secondary | `#6B7268` | Metadata, timestamps, secondary labels |
-| Border/divider | `#E8E4DB` | Card borders, dividers — subtle, warm-toned gray, not cold gray |
-| Success/positive | `#4A6B5C` (same as accent) | "All caught up" states — reuses accent rather than introducing green-as-a-new-color |
-| Error/destructive | `#B3543F` (muted terracotta) | Only for genuine errors/destructive confirmations — used sparingly, never for priority signaling |
+| Primary accent | `#6366F1` (vibrant indigo) | Primary buttons, active nav state, links, focus rings |
+| Primary accent hover | `#4F46E5` | Button hover/active states |
+| Secondary accent | `#FB923C` (warm coral-orange) | Secondary highlights, decorative shapes, alternate CTAs |
+| Tertiary accent | `#2DD4BF` (teal) | Decorative accents, variety in illustrations/blobs — used sparingly, not for primary actions |
+| Background | Soft gradient, `#FDF4FF` → `#F0F9FF` (light violet to light sky blue) | Page background — replaces the old flat cream |
+| Surface (cards) | `#FFFFFF` | Cards, panels, modals |
+| Surface shadow | Colored glow — `0 8px 24px rgba(99, 102, 241, 0.15)` | Replaces the old flat gray shadow; tint the shadow with whichever accent is nearby |
+| Text primary | `#1E1B4B` (deep indigo-black) | Headings, primary body text — warmer than pure black |
+| Text secondary | `#6B7280` | Metadata, timestamps, secondary labels |
+| Border/divider | `#E5E0FF` (soft violet-tinted gray) | Card borders, dividers |
+| Success/positive | `#22C55E` | "All caught up" states, confirmations |
+| Error/destructive | `#EF4444` | Errors, destructive confirmations — used sparingly |
 
-Notably: **no separate "urgent red"** — since MailPilot uses a single `Priority` label rather than a 3-tier color-coded system, there's no need for a traffic-light palette at all. This is a direct structural consequence of the Option E label decision.
+Multiple accent colors are now allowed on one screen (unlike the old single-accent rule) — but still with restraint: one primary action per screen, secondary/tertiary colors for decoration and variety, not for competing calls to action.
 
 ---
 
 ## Typography
 
-- **Font:** Inter (UI text) — clean, neutral, widely available, reads well at small sizes. Single font family throughout, no secondary display font.
-- **Scale:** 3 sizes only —
-  - Heading: 20px / semibold
-  - Body: 14px / regular
-  - Small/meta: 12px / regular, text-secondary color
-- No bold headers beyond the single heading size. Weight and size restraint is the point — avoid the temptation to add a 4th size "just for this one section."
+Unchanged from before — still Inter, still 3 sizes only (20px/semibold heading, 14px/regular body, 12px/regular meta). Personality here comes from color and motion, not from typographic noise.
 
 ---
 
 ## Component Style
 
-- **Border radius:** 8px throughout — cards, buttons, inputs. Consistent, not sharp, not overly rounded.
-- **Shadows:** Single subtle shadow token for elevated surfaces (cards, dropdowns) — `0 1px 3px rgba(0,0,0,0.06)`. No heavy drop shadows anywhere.
-- **Spacing:** Minimum 24px padding inside cards (explicitly more generous than Tame My Inbox's edge-to-edge density). 16px gap between list items minimum.
-- **Buttons:** One primary (filled, sage green) button per screen maximum. All other actions are secondary (outlined or text-only, gray).
+- **Border radius:** 12px (up from 8px) — slightly softer, friendlier.
+- **Shadows:** Colored/tinted shadows (see palette table) instead of flat gray — gives cards a sense of depth and warmth.
+- **Buttons:** Tactile and animated —
+  - **Hover:** slight lift + tilt (CSS 3D transform: `perspective` + `rotateX`/`rotateY` on cursor position, or a simpler fixed lift via Framer Motion's `whileHover={{ y: -2, scale: 1.02 }}`) plus a soft colored glow shadow.
+  - **Press:** scale down slightly (`whileTap={{ scale: 0.97 }}`) for tactile feedback.
+  - Primary buttons: filled, gradient-friendly (indigo primary, can blend toward the secondary coral on decorative buttons).
+  - Still: one primary (filled) button per screen maximum; others secondary/outlined.
+- **Motion library:** Framer Motion, for page transitions, button/card interactions, and simple floating/decorative animated shapes. CSS-based 3D transforms (`perspective`, `rotateX/Y`, `translateZ`) rather than a full WebGL/Three.js scene — real dimensional motion without the extra rendering weight.
 
 ---
 
 ## Key UI Patterns
 
-**Inbox dashboard (primary screen):**
-- One clear focal action: e.g. "Review Priority (6)" as the single filled button. Everything else (refresh, settings, filters) is a smaller icon-button or text link, not competing visually.
-- List of flagged emails, each showing: sender, one-line reason for flagging, timestamp (fetched live, not cached) — no snippet caching per the data policy.
-- Everything *not* flagged simply isn't shown here by default — no dense "everything sorted into 4 buckets" view. A secondary "View all" or "Browse by category" link exists for people who want it, but it's not the default view.
+**Motion, generally:**
+- Page transitions: fade + slight scale/slide on route change (not just on first load like before).
+- Cards/buttons: tilt-on-hover, lift-on-hover, press-down-on-click — every interactive element should feel like it has physical presence.
+- Decorative elements: soft floating gradient shapes/blobs in the background are welcome on marketing/onboarding-style screens, animated with a slow, subtle drift (not distracting from the actual task).
+- Classification events (dashboard list items appearing) keep a fade + slide-in, just with more spring/bounce in the easing than the old flat 150-200ms ease-out.
 
-**Navigation (sidebar):**
-- Full nav shown from v1, but only "Inbox" and "Settings" are active/clickable.
-- Future items (Commitments, Unsubscribe, etc.) shown in the same list, visually muted (lower opacity text, no hover state) with a small "Coming soon" tag — not literally disabled-gray/broken-looking.
-
-**Motion:**
-- When an email gets classified and labeled, its list item does a brief (150–200ms) fade + slight upward slide into place — signals "something just happened" without being distracting. Standard ease-out timing.
-- No motion on page load beyond a simple fade-in for the whole view.
-
-**Empty/zero state (intentionally designed, not default):**
-- When there's nothing needing attention: a centered, calm message — not a generic "No items found." Something like "You're all caught up" with a small illustration or icon in the accent color, and a subtle secondary line like "MailPilot is watching your inbox — you'll see anything that needs you here."
+**Inbox dashboard, empty states, etc.:** structural guidance (one focal action, sender/reason/timestamp shown, no snippet caching) is unchanged from before — only the visual treatment (color, shadow, motion) changes.
 
 ---
 
 ## Dark/Light Mode
 
-Light mode only for v1 (matches the "clean, Notion/Superhuman" direction and reduces build scope). Dark mode can be considered post-v1 if requested.
+Light mode only for v1 — unchanged.
 
 ---
 
 ## Reference Apps
 
-Notion and Superhuman for restraint, whitespace, and single-accent-color discipline. Explicitly *not* modeling the multi-color category-card pattern seen in Tame My Inbox's dashboard — that's the pattern MailPilot is deliberately differentiating from.
+No longer modeling Notion/Superhuman restraint. Think more energetic, colorful consumer/productivity hybrids — apps that use gradient, depth, and motion to feel alive (e.g. Linear's marketing site motion, Stripe's gradient/depth language, Duolingo's tactile button feel) as inspiration for the *feel*, while keeping MailPilot's own layout/IA (still one focal action, still no dense multi-color category dashboards).
 
 ---
 
 ## Mobile
 
-Fully responsive. On narrow viewports: sidebar collapses to a bottom tab bar or hamburger menu (implementation detail for the Implementation Plan), single-column card list, same spacing/typography scale (no separate mobile type scale needed at this size range).
+Fully responsive — unchanged structurally. Motion should be present but lighter on mobile (shorter distances, less parallax) to keep it feeling snappy rather than laggy on lower-powered devices.
 
 ---
 
 ## Accessibility
 
-- Text/background contrast checked against WCAG AA at minimum (sage green `#4A6B5C` on cream `#FAF8F3` background needs verification at implementation time — may need a slightly darker accent for small text use).
-- No information conveyed by color alone — the `Priority` label always pairs with visible text ("Priority"), not just a color dot.
-- All interactive elements reachable via keyboard, visible focus states in the accent color.
+- Text/background contrast checked against WCAG AA — needs re-verification with the new palette (deep indigo text on the light gradient background, white text on the new indigo/coral buttons) at implementation time, same caveat as before just against new colors.
+- No information conveyed by color alone.
+- All interactive elements reachable via keyboard, visible focus states in the primary accent color.
+- Respect `prefers-reduced-motion` — anyone with that OS setting enabled should get the old, calmer transitions (simple fade, no tilt/bounce), not just smaller versions of the same motion.

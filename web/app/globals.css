@@ -3,11 +3,36 @@
 @tailwind utilities;
 
 :root {
-  --background: #faf8f3;
-  --foreground: #1f2421;
+  --background: #f0f9ff;
+  --foreground: #1e1b4b;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: linear-gradient(135deg, #fdf4ff 0%, #f0f9ff 100%);
+  background-attachment: fixed;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-15px, 20px) scale(1.05); }
+}
+
+@keyframes float-alt {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(20px, -15px) scale(0.95); }
+}
+
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .blob-1 { animation: float 12s ease-in-out infinite; }
+  .blob-2 { animation: float-alt 15s ease-in-out infinite; }
 }

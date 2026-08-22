@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { BacklogForm } from "./backlog-form";
 
-// Placeholder — the real backlog date-range picker is built in Phase 4
-// (Step 15). Exists now only to confirm Step 12's Gmail OAuth flow
-// actually wrote a row to gmail_tokens for the current user.
 export default async function BacklogPage() {
   const supabase = createClient();
   const {
@@ -11,20 +9,29 @@ export default async function BacklogPage() {
 
   const { data: token } = await supabase
     .from("gmail_tokens")
-    .select("gmail_address, status, connected_at")
+    .select("gmail_address")
     .eq("user_id", user?.id)
     .single();
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
-      <h1 className="text-xl font-semibold text-foreground">Backlog range (placeholder)</h1>
-      {token ? (
-        <p className="text-sm text-text-secondary">
-          Gmail connected: {token.gmail_address} (status: {token.status})
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden p-8">
+      <div className="blob blob-1 -left-16 top-10 h-72 w-72 bg-tertiary" />
+      <div className="blob blob-2 -bottom-20 -right-16 h-80 w-80 bg-accent" />
+
+      <div className="relative z-10 w-full max-w-md rounded-2xl bg-surface p-8 text-center shadow-glow">
+        <h1 className="text-xl font-semibold text-foreground">Choose your backlog range</h1>
+        <p className="mt-3 text-sm text-text-secondary">
+          {token
+            ? `MailPilot will scan ${token.gmail_address}'s past emails to build your first triage. Pick how far back to go.`
+            : "Connect Gmail first to pick a backlog range."}
         </p>
-      ) : (
-        <p className="text-sm text-error">No gmail_tokens row found for this user.</p>
-      )}
+
+        {token && (
+          <div className="mt-6">
+            <BacklogForm />
+          </div>
+        )}
+      </div>
     </main>
   );
 }
