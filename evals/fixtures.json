@@ -1,0 +1,184 @@
+[
+  {
+    "id": "human-urgent-question-1",
+    "subject": "Quick question before the client call",
+    "from": "Priya Shah <priya.shah@acmeco.com>",
+    "body": "Hey, can you confirm the revised pricing numbers before our 3pm call with the client? I don't want to quote the old figures by mistake. Let me know ASAP if you get this.",
+    "expected": { "priority": true, "category": "Human" }
+  },
+  {
+    "id": "human-urgent-deadline-1",
+    "subject": "Need the Q3 deck tonight",
+    "from": "Marcus Webb <marcus.webb@company.io>",
+    "body": "The board moved the review up to tomorrow morning. Can you send me the finished Q3 deck by end of day tonight? Really sorry for the short notice.",
+    "expected": { "priority": true, "category": "Human" }
+  },
+  {
+    "id": "human-decision-needed-1",
+    "subject": "Which vendor should we go with?",
+    "from": "Dana Ruiz <dana@partnerfirm.com>",
+    "body": "We've narrowed it down to two vendors for the migration project. I need your sign-off by Friday to keep the timeline on track. Thoughts on Vendor A vs Vendor B?",
+    "expected": { "priority": true, "category": "Human" }
+  },
+  {
+    "id": "human-casual-fyi-1",
+    "subject": "Saw this and thought of you",
+    "from": "Sam Okafor <sam.okafor@gmail.com>",
+    "body": "No need to reply, just thought this article on productivity hacks was interesting given our conversation last week. Hope you're doing well!",
+    "expected": { "priority": false, "category": "Human" }
+  },
+  {
+    "id": "human-thank-you-1",
+    "subject": "Thanks for yesterday",
+    "from": "Lena Ortiz <lena.ortiz@clientco.com>",
+    "body": "Just wanted to say thanks for walking me through the onboarding flow yesterday, really helpful. Nothing needed from you, just appreciated it.",
+    "expected": { "priority": false, "category": "Human" }
+  },
+  {
+    "id": "human-out-of-office-1",
+    "subject": "Automatic reply: Out of Office",
+    "from": "Chris Nolan <chris.nolan@bigcorp.com>",
+    "body": "I am out of the office until Monday with limited access to email. For urgent matters, please contact my colleague at ops@bigcorp.com.",
+    "expected": { "priority": false, "category": "Notification" }
+  },
+  {
+    "id": "human-meeting-request-1",
+    "subject": "Can we push our 1:1 to Thursday?",
+    "from": "Jordan Lee <jordan.lee@company.io>",
+    "body": "Something came up on my end for our usual Tuesday slot. Any chance we could move our 1:1 to Thursday afternoon instead? Let me know what works.",
+    "expected": { "priority": true, "category": "Human" }
+  },
+  {
+    "id": "notification-security-alert-1",
+    "subject": "New sign-in to your account from an unrecognized device",
+    "from": "Account Security <security-noreply@techplatform.com>",
+    "body": "We noticed a new sign-in to your account from a device we don't recognize (Chrome on Windows, IP 203.0.113.4, location: Berlin, Germany). If this was you, no action is needed. If not, please secure your account immediately.",
+    "expected": { "priority": true, "category": "Notification" }
+  },
+  {
+    "id": "notification-password-changed-1",
+    "subject": "Your password was successfully changed",
+    "from": "no-reply@servicehub.com",
+    "body": "This is a confirmation that the password for your account was changed on August 21, 2026. If you made this change, you can ignore this email.",
+    "expected": { "priority": false, "category": "Notification" }
+  },
+  {
+    "id": "notification-comment-1",
+    "subject": "Alex commented on your post",
+    "from": "SocialApp <notifications@socialapp.com>",
+    "body": "Alex Chen commented on your post: \"Great point, totally agree!\" Tap to view the comment and reply.",
+    "expected": { "priority": false, "category": "Notification" }
+  },
+  {
+    "id": "notification-storage-warning-1",
+    "subject": "Your cloud storage is almost full",
+    "from": "CloudDrive <alerts@clouddrive.com>",
+    "body": "You're currently using 95% of your storage quota. Once you reach 100%, you won't be able to upload new files or sync existing ones. Upgrade your plan or free up space.",
+    "expected": { "priority": true, "category": "Notification" }
+  },
+  {
+    "id": "newsletter-weekly-digest-1",
+    "subject": "Your Weekly Digest: Top stories in tech",
+    "from": "TechDigest <newsletter@techdigest.com>",
+    "body": "This week: AI models get faster, a new browser engine launches, and five startups you should know about. Read the full roundup on our site.",
+    "expected": { "priority": false, "category": "Newsletter" }
+  },
+  {
+    "id": "newsletter-marketing-promo-1",
+    "subject": "48 hours only: 30% off everything",
+    "from": "StyleShop <deals@styleshop.com>",
+    "body": "Our biggest sale of the season is here! Use code SAVE30 at checkout. Shop now before it's gone — this offer ends Sunday at midnight.",
+    "expected": { "priority": false, "category": "Newsletter" }
+  },
+  {
+    "id": "newsletter-blog-update-1",
+    "subject": "New post: 10 lessons from scaling our team",
+    "from": "Founders Weekly <hello@foundersweekly.com>",
+    "body": "In this week's post, we break down the hard lessons learned scaling from 5 to 50 people. Read it here.",
+    "expected": { "priority": false, "category": "Newsletter" }
+  },
+  {
+    "id": "newsletter-webinar-invite-1",
+    "subject": "You're invited: Free webinar on cloud cost optimization",
+    "from": "CloudCo Events <events@cloudco.com>",
+    "body": "Join our free 45-minute webinar next Tuesday to learn how top companies cut cloud spend by 30%. Register now to save your seat.",
+    "expected": { "priority": false, "category": "Newsletter" }
+  },
+  {
+    "id": "transactional-order-shipped-1",
+    "subject": "Your order has shipped!",
+    "from": "Orders <orders@onlinestore.com>",
+    "body": "Good news! Your order #48213 has shipped and is on its way. Estimated delivery: August 24. Track your package here.",
+    "expected": { "priority": false, "category": "Transactional" }
+  },
+  {
+    "id": "transactional-payment-receipt-1",
+    "subject": "Receipt for your payment of $49.00",
+    "from": "billing@saasproduct.com",
+    "body": "Thanks for your payment! This confirms we've charged your card on file $49.00 for your monthly subscription. Your next billing date is September 21.",
+    "expected": { "priority": false, "category": "Transactional" }
+  },
+  {
+    "id": "transactional-payment-failed-1",
+    "subject": "Action required: Your payment failed",
+    "from": "billing@saasproduct.com",
+    "body": "We were unable to process your payment of $49.00 due to an expired card. Please update your payment method within 5 days to avoid service interruption.",
+    "expected": { "priority": true, "category": "Transactional" }
+  },
+  {
+    "id": "transactional-flight-checkin-1",
+    "subject": "Check in now for your flight tomorrow",
+    "from": "FlyAir <notifications@flyair.com>",
+    "body": "Your flight FA204 departs tomorrow at 8:45 AM. Online check-in is now open. Check in now to select your seat and save time at the airport.",
+    "expected": { "priority": true, "category": "Transactional" }
+  },
+  {
+    "id": "transactional-invoice-due-1",
+    "subject": "Invoice #INV-2201 due in 3 days",
+    "from": "accounting@vendorcompany.com",
+    "body": "This is a reminder that invoice #INV-2201 for $1,250.00 is due on August 25. Please arrange payment to avoid a late fee.",
+    "expected": { "priority": true, "category": "Transactional" }
+  },
+  {
+    "id": "uncategorized-calendar-invite-1",
+    "subject": "Invitation: Team Sync @ Wed Aug 26 2pm",
+    "from": "calendar-notification@company.io",
+    "body": "You have been invited to the following event: Team Sync. When: Wednesday, August 26, 2:00 PM - 2:30 PM. Organizer: Jordan Lee.",
+    "expected": { "priority": false, "category": "Normal / Uncategorized" }
+  },
+  {
+    "id": "uncategorized-survey-1",
+    "subject": "How did we do? Share your feedback",
+    "from": "feedback@supportdesk.com",
+    "body": "We'd love to hear about your recent support experience. This quick 2-minute survey helps us improve. No obligation to respond.",
+    "expected": { "priority": false, "category": "Normal / Uncategorized" }
+  },
+  {
+    "id": "tricky-fake-urgency-promo-1",
+    "subject": "URGENT: Your account requires immediate action",
+    "from": "PromoDeals <deals@promodeals.com>",
+    "body": "Don't miss out! Your exclusive 50% discount code expires in 2 hours. Click here now to claim your urgent savings before it's too late!",
+    "expected": { "priority": false, "category": "Newsletter" }
+  },
+  {
+    "id": "tricky-automated-but-actionable-1",
+    "subject": "Your verification code",
+    "from": "no-reply@servicehub.com",
+    "body": "Your one-time verification code is 482913. This code expires in 10 minutes. If you didn't request this, please ignore this email.",
+    "expected": { "priority": true, "category": "Notification" }
+  },
+  {
+    "id": "tricky-human-but-low-stakes-1",
+    "subject": "Lunch next week?",
+    "from": "Taylor Brooks <taylor.brooks@gmail.com>",
+    "body": "No rush at all, but would you be up for grabbing lunch sometime next week if you're free? Totally fine if not, just thought I'd ask.",
+    "expected": { "priority": false, "category": "Human" }
+  },
+  {
+    "id": "tricky-vendor-human-request-1",
+    "subject": "Contract renewal — need your decision this week",
+    "from": "Account Manager <renewals@vendorcorp.com>",
+    "body": "Hi, your annual contract is up for renewal on August 29. I need to know by Friday whether you'd like to renew at the current terms or discuss changes, otherwise service will lapse.",
+    "expected": { "priority": true, "category": "Human" }
+  }
+]

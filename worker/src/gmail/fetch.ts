@@ -1,4 +1,4 @@
-import { google } from "googleapis";
+import { google, gmail_v1 } from "googleapis";
 import type { BacklogDateRange } from "shared";
 
 export interface FetchedMessage {
@@ -8,10 +8,12 @@ export interface FetchedMessage {
   from: string;
   receivedAt: string;
   snippet: string;
+  body: string;
 }
 
 const CONCURRENCY = 10;
 const MAX_RETRIES = 3;
+const MAX_BODY_CHARS = 3000;
 
 function dateRangeToQuery(dateRange: BacklogDateRange): string | null {
   if (dateRange === "forward") return null; // no historical scan needed
@@ -36,6 +38,49 @@ async function withBackoff<T>(fn: () => Promise<T>): Promise<T> {
       await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
     }
   }
+}
+
+function decodeBase64Url(data: string): string {
+  return Buffer.from(data, "base64url").toString("utf-8");
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Walks the MIME tree for a plain-text part first, falling back to HTML
+// (stripped) if that's all there is. Never stored — only used transiently
+// to build the classification prompt for this one Claude API call.
+function extractBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
+  if (!payload) return "";
+
+  const findPart = (
+    part: gmail_v1.Schema$MessagePart,
+    mimeType: string
+  ): gmail_v1.Schema$MessagePart | null => {
+    if (part.mimeType === mimeType && part.body?.data) return part;
+    for (const child of part.parts ?? []) {
+      const found = findPart(child, mimeType);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const plainPart = findPart(payload, "text/plain");
+  if (plainPart?.body?.data) return decodeBase64Url(plainPart.body.data);
+
+  const htmlPart = findPart(payload, "text/html");
+  if (htmlPart?.body?.data) return stripHtml(decodeBase64Url(htmlPart.body.data));
+
+  if (payload.body?.data) return decodeBase64Url(payload.body.data);
+
+  return "";
 }
 
 export async function fetchGmailMessagesForRange(
@@ -65,20 +110,14 @@ export async function fetchGmailMessagesForRange(
     const batch = ids.slice(i, i + CONCURRENCY);
     const fetched = await Promise.all(
       batch.map((id) =>
-        withBackoff(() =>
-          gmail.users.messages.get({
-            userId: "me",
-            id,
-            format: "metadata",
-            metadataHeaders: ["Subject", "From", "Date"],
-          })
-        )
+        withBackoff(() => gmail.users.messages.get({ userId: "me", id, format: "full" }))
       )
     );
     for (const { data } of fetched) {
       const headers = data.payload?.headers ?? [];
       const subject = headers.find((h) => h.name === "Subject")?.value ?? "";
       const from = headers.find((h) => h.name === "From")?.value ?? "";
+      const body = extractBody(data.payload).slice(0, MAX_BODY_CHARS);
       results.push({
         gmailMessageId: data.id!,
         gmailThreadId: data.threadId!,
@@ -86,6 +125,7 @@ export async function fetchGmailMessagesForRange(
         from,
         receivedAt: new Date(Number(data.internalDate)).toISOString(),
         snippet: data.snippet ?? "",
+        body,
       });
     }
   }
