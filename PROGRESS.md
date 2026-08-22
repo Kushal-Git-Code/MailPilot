@@ -1,7 +1,7 @@
 # Progress Log — MailPilot
 
 ## Current Status
-Last updated: 2026-08-21
+Last updated: 2026-08-22
 Currently on: Phase 3, Step 12 — implement the separate Google OAuth flow for Gmail access (`gmail.readonly` + `gmail.modify`), distinct from the Supabase Auth login done in Step 11
 
 ## Completed
@@ -14,6 +14,7 @@ Currently on: Phase 3, Step 12 — implement the separate Google OAuth flow for 
   - Step 11: Supabase Auth (email + Google) implemented in `/web` — `lib/supabase/{client,server}.ts`, `middleware.ts` (protects every route except `/`, `/login`, `/auth/callback`), `/login` page (sign-in + sign-up + Google, styled per `docs/ui-ux-brief.md`), `/auth/callback` route, and a minimal `/dashboard` placeholder (real one is Phase 6) just to give the middleware something real to guard. You did the Google Cloud OAuth client + Supabase provider setup on your end.
   - Verified live in a real browser (not just build/typecheck): unauthenticated `/dashboard` → redirects to `/login`; sign-up with an invalid domain correctly errors, with a real domain correctly shows "check your email"; sign-in with a pre-confirmed test account → redirects to `/dashboard`, correct email shown; log out → redirects to `/`, and `/dashboard` is protected again; the Google button correctly initiates Supabase's OAuth `/authorize` redirect (didn't complete a real Google login — that needs your account, not something to automate). All test users cleaned up afterward.
   - Steps 12-14 (Gmail-specific OAuth, disconnect flow) not started.
+  - Post-Step-11 fix: an automated security review caught an open redirect in `/auth/callback` (the `next=` query param was concatenated into a redirect URL unvalidated). Fixed by restricting it to same-origin relative paths only, falling back to `/dashboard` otherwise. Committed separately (`bae9e92`).
 - [ ] Phase 4: Core Feature — Backlog Onboarding & Date Range (Steps 15-17) — not started
 - [ ] Phase 5: Core Feature — Classification Pipeline (Steps 18-24) — not started
 - [ ] Phase 6: Core Feature — Dashboard (Steps 25-30) — not started
@@ -25,6 +26,7 @@ Currently on: Phase 3, Step 12 — implement the separate Google OAuth flow for 
 ## Open Issues / Blockers
 - Google OAuth verification review (needed for `gmail.modify` scope) has not been started yet. Per `docs/trd.md` and `docs/implementation-plan.md`, this should begin as soon as the OAuth consent screen is finalized (Phase 3) — it's a slow external Google review process, not a code task, and gates real-user launch in Phase 10.
 - Supabase DB password and API keys were rotated once (2026-08-21) after being inadvertently surfaced in a chat session during setup. `web/.env.local` holds the current, rotated values.
+- **Design direction conflict to resolve before Phase 8 (UI Polish):** you asked (2026-08-22) for the `/login` page to eventually be more cheerful, with motion and 3D animation. `docs/ui-ux-brief.md` currently specifies the opposite — "calm, restrained, quietly confident," explicitly "not playful," minimal motion (one 150-200ms fade/slide, only on email classification, nothing on page load), Notion/Superhuman as the reference point rather than a livelier product. Not acted on yet, deliberately deferred per your request — but before implementing, this needs a conscious decision: update the brief to reflect the new direction, or scope the cheerful/3D treatment down to fit the existing restrained system. Don't silently drift from the documented brief either way.
 
 ## Notes for Next Session
 - Migrations live in `/supabase/migrations` as paired up/rollback SQL files (e.g. `0001_create_users.sql` + `0001_create_users_rollback.sql`), applied via `npm run migrate` / `npm run migrate:down` in `/web` (script: `web/scripts/migrate.mjs`), using `DATABASE_URL` from `web/.env.local`.
