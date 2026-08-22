@@ -13,3 +13,39 @@ export interface BacklogJobData {
   userId: string;
   dateRange: BacklogDateRange;
 }
+
+// Gmail token encryption — shared between /web (encrypts on OAuth callback,
+// decrypts to revoke) and /worker (decrypts to call the Gmail API). Kept
+// here, not duplicated, so both sides can never drift out of sync.
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+
+const CRYPTO_ALGORITHM = "aes-256-gcm";
+const CRYPTO_IV_LENGTH = 12;
+const CRYPTO_AUTH_TAG_LENGTH = 16;
+
+function getEncryptionKey(): Buffer {
+  const hex = process.env.TOKEN_ENCRYPTION_KEY;
+  if (!hex) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
+  const key = Buffer.from(hex, "hex");
+  if (key.length !== 32) throw new Error("TOKEN_ENCRYPTION_KEY must be 32 bytes (64 hex chars)");
+  return key;
+}
+
+/** Encrypts a string for storage. Never store Gmail tokens in plaintext. */
+export function encrypt(plaintext: string): string {
+  const iv = randomBytes(CRYPTO_IV_LENGTH);
+  const cipher = createCipheriv(CRYPTO_ALGORITHM, getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return Buffer.concat([iv, authTag, encrypted]).toString("base64");
+}
+
+export function decrypt(ciphertext: string): string {
+  const data = Buffer.from(ciphertext, "base64");
+  const iv = data.subarray(0, CRYPTO_IV_LENGTH);
+  const authTag = data.subarray(CRYPTO_IV_LENGTH, CRYPTO_IV_LENGTH + CRYPTO_AUTH_TAG_LENGTH);
+  const encrypted = data.subarray(CRYPTO_IV_LENGTH + CRYPTO_AUTH_TAG_LENGTH);
+  const decipher = createDecipheriv(CRYPTO_ALGORITHM, getEncryptionKey(), iv);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+}

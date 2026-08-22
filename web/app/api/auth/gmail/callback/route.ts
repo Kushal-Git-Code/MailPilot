@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { encrypt } from "@/lib/crypto";
+import { encrypt } from "shared";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

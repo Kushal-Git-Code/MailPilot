@@ -1,6 +1,6 @@
-import type { Placeholder } from "shared";
+import "./env.js";
+import { startBacklogWorker } from "./jobs/backlog-worker.js";
 
-console.log("MailPilot worker: hello world by KT");
-
-const sharedTypeCheck: Placeholder = { id: "shared-import-ok" };
-console.log(`MailPilot worker: shared import resolved (${sharedTypeCheck.id})`);
+console.log("MailPilot worker: starting...");
+startBacklogWorker();
+console.log("MailPilot worker: listening for backlog-classification jobs");
