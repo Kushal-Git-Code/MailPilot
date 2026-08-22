@@ -1,9 +1,25 @@
 import { Worker } from "bullmq";
 import { Redis as IORedis } from "ioredis";
 import { google } from "googleapis";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { BACKLOG_QUEUE_NAME, decrypt, type BacklogJobData } from "shared";
 import { fetchGmailMessagesForRange } from "../gmail/fetch.js";
+import { classifyEmail } from "../classification/classify.js";
+import { persistClassification } from "../classification/persist.js";
+import { applyPriorityLabel } from "../gmail/label.js";
+import { getRemainingDailyCapacity, incrementDailyCount, msUntilNextReset } from "../limits/dailyCap.js";
+import { getBacklogQueue } from "./queue.js";
+
+async function alreadyProcessedIds(supabase: SupabaseClient, userId: string, ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("emails")
+    .select("gmail_message_id")
+    .eq("user_id", userId)
+    .in("gmail_message_id", ids);
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.gmail_message_id));
+}
 
 export function startBacklogWorker() {
   const connection = new IORedis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
@@ -33,12 +49,62 @@ export function startBacklogWorker() {
       );
       oauth2Client.setCredentials({ refresh_token: decrypt(tokenRow.refresh_token) });
 
-      const messages = await fetchGmailMessagesForRange(oauth2Client, dateRange);
-      console.log(`[backlog-worker] Fetched ${messages.length} message(s) for user ${userId}`);
+      const allMessages = await fetchGmailMessagesForRange(oauth2Client, dateRange);
+      console.log(`[backlog-worker] Fetched ${allMessages.length} message(s) for user ${userId}`);
 
-      // Classification (Step 19), DB writes (Step 21), and Gmail labeling
-      // (Step 22) land in later steps — Step 18 only proves the fetch works.
-      return { fetchedCount: messages.length };
+      // Skip messages already written to `emails` (Step 21's unique
+      // constraint makes this safe) — this is also what makes "resume
+      // tomorrow" work without any separate cursor/pagination state.
+      const doneIds = await alreadyProcessedIds(
+        supabase,
+        userId,
+        allMessages.map((m) => m.gmailMessageId)
+      );
+      const pending = allMessages.filter((m) => !doneIds.has(m.gmailMessageId));
+      console.log(`[backlog-worker] ${pending.length} message(s) not yet processed`);
+
+      const { remaining, resetAt } = await getRemainingDailyCapacity(supabase, userId);
+      const toProcess = pending.slice(0, remaining);
+      const leftover = pending.length - toProcess.length;
+      console.log(
+        `[backlog-worker] Daily cap remaining: ${remaining}. Processing ${toProcess.length} now, ${leftover} left over.`
+      );
+
+      let processedCount = 0;
+      let priorityCount = 0;
+      for (const message of toProcess) {
+        const classification = await classifyEmail(message);
+        const { emailId } = await persistClassification(supabase, {
+          userId,
+          gmailMessageId: message.gmailMessageId,
+          gmailThreadId: message.gmailThreadId,
+          receivedAt: message.receivedAt,
+          classification,
+        });
+        if (classification.priority) {
+          await applyPriorityLabel(supabase, oauth2Client, {
+            userId,
+            gmailMessageId: message.gmailMessageId,
+            emailId,
+          });
+          priorityCount++;
+        }
+        processedCount++;
+      }
+      await incrementDailyCount(supabase, userId, processedCount);
+      console.log(
+        `[backlog-worker] Classified ${processedCount} email(s), ${priorityCount} flagged priority.`
+      );
+
+      if (leftover > 0) {
+        const delay = msUntilNextReset(resetAt);
+        await getBacklogQueue().add("scan", { userId, dateRange }, { delay });
+        console.log(
+          `[backlog-worker] Daily cap reached — ${leftover} message(s) queued to resume in ${Math.round(delay / 60000)} min.`
+        );
+      }
+
+      return { processedCount, priorityCount, leftover };
     },
     { connection }
   );
