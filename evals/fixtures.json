@@ -144,14 +144,14 @@
     "subject": "Invitation: Team Sync @ Wed Aug 26 2pm",
     "from": "calendar-notification@company.io",
     "body": "You have been invited to the following event: Team Sync. When: Wednesday, August 26, 2:00 PM - 2:30 PM. Organizer: Jordan Lee.",
-    "expected": { "priority": false, "category": "Normal / Uncategorized" }
+    "expected": { "priority": false, "category": "Notification" }
   },
   {
     "id": "uncategorized-survey-1",
     "subject": "How did we do? Share your feedback",
     "from": "feedback@supportdesk.com",
     "body": "We'd love to hear about your recent support experience. This quick 2-minute survey helps us improve. No obligation to respond.",
-    "expected": { "priority": false, "category": "Normal / Uncategorized" }
+    "expected": { "priority": false, "category": "Notification" }
   },
   {
     "id": "tricky-fake-urgency-promo-1",

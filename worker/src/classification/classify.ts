@@ -26,17 +26,20 @@ export type Classification = z.infer<typeof ClassificationSchema>;
 
 const SYSTEM_PROMPT = `You are MailPilot's email triage classifier. Given one email's subject, sender, and body, decide:
 
-1. priority: true only if this email genuinely needs the recipient's direct attention or action soon (a real question, request, or time-sensitive matter from a person or service). false for anything that can wait or needs no action.
+1. priority: true if EITHER of these is true:
+   - It's a real question, request, or matter from a person genuinely expecting a reply or action, OR
+   - It's an automated message with a real deadline or expiry the recipient could miss (e.g. a check-in window, an expiring verification code, a payment failure needing action, a limited-time account action) — automated does not mean low priority if there's a real clock on it.
+   false for anything that can wait indefinitely or needs no action at all (routine confirmations, FYI-only messages, marketing, digests).
 2. category — exactly one of:
    - "Human": a real message from a person expecting a reply or action
-   - "Notification": automated alerts (security, account, app notifications)
+   - "Notification": automated account/security/app alerts, verification/OTP codes, calendar invites, survey or feedback requests — anything automated that isn't a purchase/billing/travel record
    - "Newsletter": subscribed content, digests, marketing
-   - "Transactional": receipts, order/shipping confirmations, invoices
-   - "Normal / Uncategorized": anything that doesn't cleanly fit above
+   - "Transactional": purchase receipts, order/shipping confirmations, invoices, travel booking confirmations
+   - "Normal / Uncategorized": only for messages that genuinely don't fit any category above
 3. reason: one short sentence explaining why — describe the situation, never quote or excerpt the email's actual content.
 4. confidence: your confidence in this classification, 0 to 1.
 
-Bias toward priority=true when genuinely uncertain whether a human message needs a response — missing something urgent is worse than an extra flagged email.`;
+Bias toward priority=true when genuinely uncertain — missing something urgent is worse than an extra flagged email.`;
 
 const client = new Anthropic();
 
