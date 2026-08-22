@@ -14,6 +14,14 @@ export default async function DashboardPage() {
       <h1 className="text-xl font-semibold text-foreground">Dashboard placeholder</h1>
       <p className="text-sm text-text-secondary">Logged in as {user?.email}</p>
       <LogoutButton />
+      <form action="/api/gmail/disconnect" method="POST">
+        <button
+          type="submit"
+          className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-background"
+        >
+          Disconnect Gmail
+        </button>
+      </form>
     </main>
   );
 }

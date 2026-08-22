@@ -3,7 +3,7 @@
 export default function ConnectGmailPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; message?: string };
 }) {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
@@ -11,6 +11,11 @@ export default function ConnectGmailPage({
       {searchParams.error && (
         <p className="text-xs text-error">
           Something went wrong connecting Gmail. Please try again.
+        </p>
+      )}
+      {searchParams.message === "disconnected" && (
+        <p className="text-xs text-text-secondary">
+          Gmail disconnected. Reconnect anytime — your account and data are safe.
         </p>
       )}
       <a
