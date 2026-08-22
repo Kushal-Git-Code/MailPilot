@@ -11,16 +11,38 @@ const OPTIONS = [
 
 export function BacklogForm() {
   const [selected, setSelected] = useState<(typeof OPTIONS)[number]["value"] | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (confirmed) {
+  async function handleGetStarted() {
+    if (!selected) return;
+    setStatus("loading");
+    setErrorMessage(null);
+    try {
+      const res = await fetch("/api/onboarding/backlog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateRange: selected }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Something went wrong.");
+      }
+      setStatus("done");
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
+  }
+
+  if (status === "done") {
     return (
       <motion.p
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         className="rounded-lg bg-success/10 px-4 py-3 text-sm text-text-secondary"
       >
-        Range saved — backlog processing hookup lands in the next step (Step 16).
+        Range saved — your backlog scan job has been queued.
       </motion.p>
     );
   }
@@ -49,6 +71,10 @@ export function BacklogForm() {
         );
       })}
 
+      {status === "error" && errorMessage && (
+        <p className="text-xs text-error">{errorMessage}</p>
+      )}
+
       <AnimatePresence>
         {selected && (
           <motion.button
@@ -56,12 +82,13 @@ export function BacklogForm() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
-            onClick={() => setConfirmed(true)}
-            className="mt-2 rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3 text-sm font-semibold text-white shadow-glow"
+            onClick={handleGetStarted}
+            disabled={status === "loading"}
+            className="mt-2 rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3 text-sm font-semibold text-white shadow-glow disabled:opacity-60"
             whileHover={{ y: -2, scale: 1.02 }}
             whileTap={{ scale: 0.97 }}
           >
-            Get Started
+            {status === "loading" ? "Starting..." : "Get Started"}
           </motion.button>
         )}
       </AnimatePresence>
