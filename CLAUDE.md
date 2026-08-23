@@ -3,7 +3,7 @@
 > **Note:** No codebase exists yet, so this was written by hand from project decisions, not scanned from code. Once the initial scaffold exists, re-run the "Create Your CLAUDE.md" prompt (scan the codebase) to catch drift between what was intended here and what actually got built — then merge the results.
 
 ## What this project is
-MailPilot is an AI email assistant that connects to a user's Gmail account and automatically triages incoming mail — classifying by priority/category and applying a single `MailPilot/Priority` label to what needs attention — so the user spends less time on manual sorting. Phase 1 = triage only. Phase 2 (not yet in scope) = Smart Unsubscribe (subscription scanner, bulk unsubscribe, mute). Phase 3 (not yet in scope, decided 2026-08-23) = Reply Drafting — see "Future phase: Reply Drafting" below. No voice assistant planned currently.
+MailPilot is an AI email assistant that connects to a user's Gmail account and automatically triages incoming mail — classifying by priority/category and applying a single `MailPilot/Priority` label to what needs attention — so the user spends less time on manual sorting. Phase 1 = triage only, currently being built — **every later phase below waits until Phase 1 is fully live and proven to work well; only then does the next phase start, one at a time, not in parallel.** Phase 2 (not yet in scope) = Smart Unsubscribe (subscription scanner, bulk unsubscribe, mute). Phases 3-7 (not yet in scope, decided 2026-08-23, inspired by competitor "Tame My Inbox") = Reply Drafting, One-Click Actions, VIP Detection, Commitment Tracking, Email Analytics — see the "Future phase" sections below for each. No voice assistant planned currently.
 
 ## Future phase: Reply Drafting (Phase 3 — not yet started)
 Decided 2026-08-23, inspired by competitor "Tame My Inbox" (their "IRIS" assistant / "Quick Replies" feature). Do not build any part of this until Phase 1 (triage) and Phase 2 (Smart Unsubscribe) are both live — this section exists to capture the design intent now, before it's forgotten, not to greenlight starting it.
@@ -13,6 +13,31 @@ Decided 2026-08-23, inspired by competitor "Tame My Inbox" (their "IRIS" assista
 - **MailPilot must never call Gmail's Send API.** The draft sits in Gmail, unsent, until the user reviews/edits and sends it themselves natively in Gmail. This is a deliberate scope boundary: creating a discardable, reversible draft is an additive action similar to labeling; actually sending an email on the user's behalf is a fundamentally different, much higher-trust action that this project is not taking on.
 - **OAuth scope impact:** this will require declaring and requesting a wider Gmail scope (likely `gmail.compose`, or confirm whether `gmail.modify` already covers draft creation) — per the existing hard rule below, this needs explicit approval and reconsideration of the Google verification review before implementation starts, not something to slip in incidentally.
 - **Dashboard impact:** a new "Quick Replies" section, distinct from the existing Priority list, showing each drafted reply's text so the user can judge it before ever opening Gmail.
+
+## Future phase: One-Click Actions — Archive & Snooze (Phase 4 — not yet started)
+Decided 2026-08-23, inspired by Tame My Inbox's "one-click actions: archive, reply, snooze." "Reply" here is already covered by Phase 3 above — this phase is just Archive and Snooze.
+
+- **Archive:** straightforward — a dashboard button calling the Gmail API to remove the `INBOX` label from a message. Already compatible with the existing hard rules (archive-only, reversible, must be logged to `audit_log` before the write, same pattern as the Priority label).
+- **Snooze:** Gmail has no public API for its own snooze feature (it's client-side only in Gmail's UI) — MailPilot would need to build this itself: store a `snoozed_until` timestamp against the email's row (metadata only, no content — compatible with the zero-content-storage rule), hide it from the dashboard until that time, then re-surface it via a scheduled job. This needs its own design pass when the phase actually starts (e.g. does re-surfacing need a new notification, or is it passive — just reappears next time the dashboard is opened).
+
+## Future phase: VIP Detection (Phase 5 — not yet started)
+Decided 2026-08-23, inspired by Tame My Inbox's "VIP detection so you never miss important people."
+
+- **Scope:** let the user mark specific senders as VIP (in Settings). Any email from a VIP sender is deterministically flagged `priority: true`, overriding the AI classification rather than just influencing it — the point is a guarantee, not a nudge.
+- **Likely fits the existing `rules` table** (already in the schema, and already slated in `docs/implementation-plan.md` Step 32 for user-customizable classification categories) — VIP sender lists are a natural extension of the same rules mechanism rather than a new table.
+
+## Future phase: Commitment Tracking (Phase 6 — not yet started)
+Decided 2026-08-23, inspired by Tame My Inbox's "IRIS automatically extracts promises, deadlines, and action items from your emails" (track what you owe / what's owed to you, get nudged as deadlines approach).
+
+- **Open policy question to resolve before this phase starts, not silently assumed:** extracting a commitment means generating and storing a short paraphrase of email content (e.g. "you promised to send the report by Friday") — even a short AI-generated summary is still content *derived from* the email body, which sits in real tension with the current hard rule of never storing any email content, ever. This needs an explicit decision (and probably an explicit update to that hard rule's wording) before writing any code here, not a quiet workaround.
+- **Scope (pending that decision):** a second Claude pass extracts promises/deadlines/action items per email, direction (owed by the user vs. owed to the user), and a due date if present. New `commitments` table, linked back to `gmail_message_id` the same way `emails` already links back to Gmail.
+- **Deadline nudges:** needs its own delivery-mechanism decision (in-app only, vs. email, vs. push) — not decided yet.
+
+## Future phase: Email Analytics (Phase 7 — not yet started)
+Decided 2026-08-23, inspired by Tame My Inbox's "see how much time you saved, who emails you most, and where your inbox trends are heading" (volume trends, response times, busiest hours, relationship health, time-saved ROI).
+
+- **Scope:** aggregate reporting dashboard built from data already compatible with the zero-content-storage rule — volume/timing trends come from `emails.received_at` + classification metadata already stored; "relationship health" (who's going cold/most engaged) is derived from per-sender timestamp trends, not content. Response-time metrics would need additional Gmail API calls (thread reply timestamps) not currently made anywhere in the pipeline.
+- **Time-saved ROI is inherently an estimate** (some assumed average minutes-saved-per-triaged-email), not a real measurement — should be presented as such, not as a precise metric.
 
 ## Tech stack + versions that matter
 - Frontend: Next.js 14 (App Router), TypeScript, Tailwind CSS
