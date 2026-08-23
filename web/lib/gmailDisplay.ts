@@ -10,7 +10,23 @@ export interface DisplayInfo {
 // subject are never persisted, only fetched live and cached in server RAM
 // for the life of this process. Don't "upgrade" this without approval.
 const cache = new Map<string, DisplayInfo>();
-const CONCURRENCY = 10;
+const CONCURRENCY = 20;
+const MAX_RETRIES = 3;
+
+// Gmail API rate limits are a hard constraint (per CLAUDE.md) — same
+// backoff pattern as worker/src/gmail/fetch.ts, not a naive retry loop.
+async function withBackoff<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const status = (err as { code?: number; response?: { status?: number } })?.response?.status;
+      const isRateLimited = status === 429 || status === 403;
+      if (!isRateLimited || attempt >= MAX_RETRIES) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+    }
+  }
+}
 
 export async function getEmailDisplayInfo(
   gmail: gmail_v1.Gmail,
@@ -33,12 +49,14 @@ export async function getEmailDisplayInfo(
     const batch = uncached.slice(i, i + CONCURRENCY);
     const fetched = await Promise.all(
       batch.map((id) =>
-        gmail.users.messages.get({
-          userId: "me",
-          id,
-          format: "metadata",
-          metadataHeaders: ["Subject", "From"],
-        })
+        withBackoff(() =>
+          gmail.users.messages.get({
+            userId: "me",
+            id,
+            format: "metadata",
+            metadataHeaders: ["Subject", "From"],
+          })
+        )
       )
     );
     for (const { data } of fetched) {

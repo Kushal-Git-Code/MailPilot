@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
-import { LogoutButton } from "./logout-button";
-import { PriorityList, type PriorityListItem } from "./priority-list";
+import { LogoutButton } from "../logout-button";
+import { AllEmailsList, type AllEmailsItem } from "./all-list";
 
-export default async function DashboardPage() {
+export default async function AllEmailsPage() {
   const supabase = createClient();
   const {
     data: { user },
@@ -34,14 +34,20 @@ export default async function DashboardPage() {
     );
   }
 
-  const { data: flaggedEmails } = await supabase
-    .from("emails")
-    .select("id, gmail_message_id, gmail_thread_id, classification_reason, received_at")
-    .eq("user_id", user.id)
-    .eq("priority_flagged", true)
-    .order("received_at", { ascending: false });
+  // Capped so live-fetch cost stays bounded regardless of how much history
+  // has accumulated — most recent first, since that's what's relevant day
+  // to day. Full pagination isn't built yet; this keeps the page fast in
+  // the meantime rather than degrading as the account ages.
+  const MAX_EMAILS = 150;
 
-  const emails = flaggedEmails ?? [];
+  const { data: allEmails } = await supabase
+    .from("emails")
+    .select("id, gmail_message_id, gmail_thread_id, classification_reason, category, priority_flagged, received_at")
+    .eq("user_id", user.id)
+    .order("received_at", { ascending: false })
+    .limit(MAX_EMAILS);
+
+  const emails = allEmails ?? [];
   const displayMap =
     emails.length > 0
       ? await getEmailDisplayInfo(
@@ -50,7 +56,7 @@ export default async function DashboardPage() {
         )
       : new Map();
 
-  const items: PriorityListItem[] = emails.map((e) => {
+  const items: AllEmailsItem[] = emails.map((e) => {
     const info = displayMap.get(e.gmail_message_id);
     return {
       id: e.id,
@@ -59,6 +65,8 @@ export default async function DashboardPage() {
       subject: info?.subject ?? "(no subject)",
       reason: e.classification_reason ?? "",
       receivedAt: e.received_at,
+      category: e.category,
+      priorityFlagged: e.priority_flagged,
     };
   });
 
@@ -70,12 +78,13 @@ export default async function DashboardPage() {
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">
-              {items.length > 0 ? `Needs You (${items.length})` : "MailPilot"}
-            </h1>
-            <a href="/dashboard/all" className="text-xs font-medium text-accent hover:underline">
-              Browse all mail &rarr;
+            <h1 className="text-xl font-semibold text-foreground">All Mail</h1>
+            <a href="/dashboard" className="text-xs font-medium text-accent hover:underline">
+              &larr; Back to Needs You
             </a>
+            {emails.length === MAX_EMAILS && (
+              <p className="mt-1 text-xs text-text-secondary">Showing your most recent {MAX_EMAILS}</p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <form action="/api/gmail/disconnect" method="POST">
@@ -92,13 +101,13 @@ export default async function DashboardPage() {
 
         {items.length === 0 ? (
           <div className="rounded-2xl bg-surface p-10 text-center shadow-glow">
-            <h2 className="text-xl font-semibold text-foreground">You&apos;re all caught up</h2>
+            <h2 className="text-xl font-semibold text-foreground">Nothing classified yet</h2>
             <p className="mt-2 text-sm text-text-secondary">
-              MailPilot is watching your inbox — you&apos;ll see anything that needs you here.
+              Once MailPilot processes your inbox, everything will show up here.
             </p>
           </div>
         ) : (
-          <PriorityList items={items} />
+          <AllEmailsList items={items} />
         )}
       </div>
     </main>

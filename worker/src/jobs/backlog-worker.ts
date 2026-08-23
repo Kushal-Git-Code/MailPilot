@@ -10,6 +10,11 @@ import { applyPriorityLabel } from "../gmail/label.js";
 import { getRemainingDailyCapacity, incrementDailyCount, msUntilNextReset } from "../limits/dailyCap.js";
 import { getBacklogQueue } from "./queue.js";
 
+// Same bounded-concurrency pattern as gmail/fetch.ts — classification is
+// one Claude call per email (~2-3s), so sequential processing was the
+// dominant cost of a backlog scan.
+const CONCURRENCY = 10;
+
 async function alreadyProcessedIds(supabase: SupabaseClient, userId: string, ids: string[]): Promise<Set<string>> {
   if (ids.length === 0) return new Set();
   const { data, error } = await supabase
@@ -72,24 +77,30 @@ export function startBacklogWorker() {
 
       let processedCount = 0;
       let priorityCount = 0;
-      for (const message of toProcess) {
-        const classification = await classifyEmail(message);
-        const { emailId } = await persistClassification(supabase, {
-          userId,
-          gmailMessageId: message.gmailMessageId,
-          gmailThreadId: message.gmailThreadId,
-          receivedAt: message.receivedAt,
-          classification,
-        });
-        if (classification.priority) {
-          await applyPriorityLabel(supabase, oauth2Client, {
-            userId,
-            gmailMessageId: message.gmailMessageId,
-            emailId,
-          });
-          priorityCount++;
-        }
-        processedCount++;
+      for (let i = 0; i < toProcess.length; i += CONCURRENCY) {
+        const batch = toProcess.slice(i, i + CONCURRENCY);
+        const flags = await Promise.all(
+          batch.map(async (message) => {
+            const classification = await classifyEmail(message);
+            const { emailId } = await persistClassification(supabase, {
+              userId,
+              gmailMessageId: message.gmailMessageId,
+              gmailThreadId: message.gmailThreadId,
+              receivedAt: message.receivedAt,
+              classification,
+            });
+            if (classification.priority) {
+              await applyPriorityLabel(supabase, oauth2Client, {
+                userId,
+                gmailMessageId: message.gmailMessageId,
+                emailId,
+              });
+            }
+            return classification.priority;
+          })
+        );
+        processedCount += batch.length;
+        priorityCount += flags.filter(Boolean).length;
       }
       await incrementDailyCount(supabase, userId, processedCount);
       console.log(
