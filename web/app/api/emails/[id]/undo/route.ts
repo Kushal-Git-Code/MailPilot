@@ -19,7 +19,7 @@ export async function POST(_request: Request, { params }: { params: { id: string
 
   const { data: emailRow } = await supabase
     .from("emails")
-    .select("id, user_id, gmail_message_id, priority_flagged, user_corrected")
+    .select("id, user_id, gmail_message_id, priority_flagged, category, user_corrected")
     .eq("id", params.id)
     .single();
   if (!emailRow || emailRow.user_id !== user.id) {
@@ -39,6 +39,42 @@ export async function POST(_request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: "Nothing to undo" }, { status: 409 });
   }
 
+  // Category correction is a fully independent reversal path — never
+  // touches Gmail (category is dashboard-only), never touches the
+  // priority flag or its rule.
+  if (lastEntry.action === "category_corrected") {
+    const targetCategory = (lastEntry.previous_state as { category?: string | null } | null)?.category ?? null;
+    const ruleId = (lastEntry.new_state as { ruleId?: string | null } | null)?.ruleId ?? null;
+
+    // Reset user_corrected the same way the priority path below does —
+    // it should mean "a correction is currently in effect," not "one was
+    // ever made." (Same simplification as the priority path: doesn't
+    // check whether the *other* dimension still has an active correction
+    // — an existing, accepted limitation, not a new one introduced here.)
+    const { error: updateError } = await supabase
+      .from("emails")
+      .update({ category: targetCategory, user_corrected: false })
+      .eq("id", emailRow.id);
+    if (updateError) throw updateError;
+
+    if (ruleId) {
+      await supabase.from("rules").update({ active: false }).eq("id", ruleId).eq("user_id", user.id);
+    }
+
+    await supabase.from("audit_log").insert({
+      user_id: user.id,
+      email_id: emailRow.id,
+      action: "undone",
+      previous_state: { category: emailRow.category },
+      new_state: { category: targetCategory, undidActionId: lastEntry.id },
+      reversible_until: new Date(Date.now() + 30 * 24 * 3600_000).toISOString(),
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // Everything else reverses the priority flag (and, for a correction,
+  // the sender rule it created) — the original Step 29 path, unchanged.
   let targetPriority: boolean;
   let ruleIdToDeactivate: string | null = null;
   let resetUserCorrected = false;

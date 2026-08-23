@@ -1,17 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import { DEFAULT_CATEGORIES } from "shared";
 import type { FetchedMessage } from "../gmail/fetch.js";
-
-// Default categories per docs/prd-gmail-triage.md — user-customizable via
-// the rules table starting Phase 7; this is just the sensible default set.
-export const DEFAULT_CATEGORIES = [
-  "Human",
-  "Notification",
-  "Newsletter",
-  "Transactional",
-  "Normal / Uncategorized",
-] as const;
 
 export const ClassificationSchema = z.object({
   priority: z.boolean().describe("True if this email needs the user's direct attention/action."),

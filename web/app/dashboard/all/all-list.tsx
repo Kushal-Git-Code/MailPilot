@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CorrectionButton } from "../correction-button";
 import { UndoButton } from "../undo-button";
+import { CategoryCorrectionSelect } from "../category-correction-select";
 
 export interface AllEmailsItem {
   id: string;
@@ -121,6 +122,7 @@ export function AllEmailsList({ items }: { items: AllEmailsItem[] }) {
                 </a>
                 <div className="mt-3 flex items-center justify-end gap-3">
                   {item.undoable && <UndoButton emailId={item.id} />}
+                  <CategoryCorrectionSelect emailId={item.id} currentCategory={item.category} />
                   <CorrectionButton emailId={item.id} currentPriority={item.priorityFlagged} />
                 </div>
               </div>

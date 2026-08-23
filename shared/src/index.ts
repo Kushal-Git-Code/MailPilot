@@ -14,6 +14,21 @@ export interface BacklogJobData {
   dateRange: BacklogDateRange;
 }
 
+// Default classification categories per docs/prd-gmail-triage.md —
+// user-customizable via the rules table starting Phase 7; this is the
+// sensible default set. Shared so /web can validate a category correction
+// against the exact same values /worker's classifier is allowed to output
+// — never duplicated, never allowed to drift.
+export const DEFAULT_CATEGORIES = [
+  "Human",
+  "Notification",
+  "Newsletter",
+  "Transactional",
+  "Normal / Uncategorized",
+] as const;
+
+export type DefaultCategory = (typeof DEFAULT_CATEGORIES)[number];
+
 // Gmail token encryption — shared between /web (encrypts on OAuth callback,
 // decrypts to revoke) and /worker (decrypts to call the Gmail API). Kept
 // here, not duplicated, so both sides can never drift out of sync.

@@ -2,11 +2,11 @@ import { Worker } from "bullmq";
 import { Redis as IORedis } from "ioredis";
 import { google } from "googleapis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { BACKLOG_QUEUE_NAME, applyPriorityLabel, decrypt, type BacklogJobData } from "shared";
+import { BACKLOG_QUEUE_NAME, applyPriorityLabel, decrypt, type BacklogJobData, type DefaultCategory } from "shared";
 import { fetchGmailMessagesForRange } from "../gmail/fetch.js";
 import { classifyEmail } from "../classification/classify.js";
 import { persistClassification } from "../classification/persist.js";
-import { applyCorrectionOverride } from "../classification/applyCorrectionOverride.js";
+import { applyCorrectionOverride, applyCategoryOverride } from "../classification/applyCorrectionOverride.js";
 import { getRemainingDailyCapacity, incrementDailyCount, msUntilNextReset } from "../limits/dailyCap.js";
 import { getBacklogQueue } from "./queue.js";
 
@@ -49,6 +49,28 @@ async function loadSenderCorrectionRules(supabase: SupabaseClient, userId: strin
   return rules;
 }
 
+// Category's own remembered-correction lookup — separate rule_type from
+// priority's "correction_signal" (Step 30, Gap 2) so correcting one
+// dimension for a sender can never clobber the other.
+async function loadSenderCategoryRules(supabase: SupabaseClient, userId: string): Promise<Map<string, DefaultCategory>> {
+  const { data, error } = await supabase
+    .from("rules")
+    .select("rule_data")
+    .eq("user_id", userId)
+    .eq("rule_type", "category_correction_signal")
+    .eq("active", true);
+  if (error) throw error;
+
+  const rules = new Map<string, DefaultCategory>();
+  for (const row of data ?? []) {
+    const ruleData = row.rule_data as { sender?: string; category?: DefaultCategory };
+    if (ruleData.sender && ruleData.category) {
+      rules.set(ruleData.sender, ruleData.category);
+    }
+  }
+  return rules;
+}
+
 export function startBacklogWorker() {
   const connection = new IORedis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -59,6 +81,7 @@ export function startBacklogWorker() {
     BACKLOG_QUEUE_NAME,
     async (job) => {
       const { userId, dateRange } = job.data;
+      const startedAt = new Date().toISOString();
       console.log(`[backlog-worker] Processing job ${job.id} for user ${userId} (${dateRange})`);
 
       const { data: tokenRow, error } = await supabase
@@ -92,6 +115,7 @@ export function startBacklogWorker() {
       console.log(`[backlog-worker] ${pending.length} message(s) not yet processed`);
 
       const senderRules = await loadSenderCorrectionRules(supabase, userId);
+      const senderCategoryRules = await loadSenderCategoryRules(supabase, userId);
 
       const { remaining, resetAt } = await getRemainingDailyCapacity(supabase, userId);
       const toProcess = pending.slice(0, remaining);
@@ -107,7 +131,8 @@ export function startBacklogWorker() {
         const flags = await Promise.all(
           batch.map(async (message) => {
             const aiClassification = await classifyEmail(message);
-            const classification = applyCorrectionOverride(aiClassification, message.from, senderRules);
+            const priorityApplied = applyCorrectionOverride(aiClassification, message.from, senderRules);
+            const classification = applyCategoryOverride(priorityApplied, message.from, senderCategoryRules);
 
             const { emailId } = await persistClassification(supabase, {
               userId,
@@ -133,6 +158,19 @@ export function startBacklogWorker() {
       console.log(
         `[backlog-worker] Classified ${processedCount} email(s), ${priorityCount} flagged priority.`
       );
+
+      // US-4's dashboard summary: one explicit row per job run, not
+      // reconstructed from audit_log timestamps — precise, not heuristic.
+      // Written even when processedCount is 0, so "last checked" reflects
+      // this run, not a stale earlier one.
+      const { error: sessionError } = await supabase.from("triage_sessions").insert({
+        user_id: userId,
+        started_at: startedAt,
+        completed_at: new Date().toISOString(),
+        processed_count: processedCount,
+        priority_count: priorityCount,
+      });
+      if (sessionError) throw sessionError;
 
       if (leftover > 0) {
         const delay = msUntilNextReset(resetAt);

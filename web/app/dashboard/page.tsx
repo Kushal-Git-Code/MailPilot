@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
 import { getUndoableEmailIds } from "@/lib/undoability";
+import { getLatestSession } from "@/lib/triageSession";
 import { LogoutButton } from "./logout-button";
 import { PriorityList, type PriorityListItem } from "./priority-list";
+import { SessionSummary } from "./session-summary";
 
 // This page's data (classifications, corrections, undo availability) can
 // change from one visit to the next — never let Next.js cache a stale
@@ -65,6 +67,8 @@ export default async function DashboardPage() {
         )
       : new Set<string>();
 
+  const latestSession = await getLatestSession(supabase, user.id);
+
   const items: PriorityListItem[] = emails.map((e) => {
     const info = displayMap.get(e.gmail_message_id);
     return {
@@ -105,6 +109,8 @@ export default async function DashboardPage() {
             <LogoutButton />
           </div>
         </header>
+
+        <SessionSummary session={latestSession} />
 
         {items.length === 0 ? (
           <div className="rounded-2xl bg-surface p-10 text-center shadow-glow">

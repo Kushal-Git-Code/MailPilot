@@ -5,7 +5,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // audit_log entry is still within its reversible_until window and is an
 // action with a real prior state to revert to (not the initial
 // "email_classified" entry, which has no previous_state).
-const UNDOABLE_ACTIONS = new Set(["label_applied", "label_removed", "correction_made", "undone"]);
+const UNDOABLE_ACTIONS = new Set([
+  "label_applied",
+  "label_removed",
+  "correction_made",
+  "category_corrected",
+  "undone",
+]);
 
 export async function getUndoableEmailIds(
   supabase: SupabaseClient,
