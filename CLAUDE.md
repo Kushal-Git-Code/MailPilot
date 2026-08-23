@@ -3,7 +3,16 @@
 > **Note:** No codebase exists yet, so this was written by hand from project decisions, not scanned from code. Once the initial scaffold exists, re-run the "Create Your CLAUDE.md" prompt (scan the codebase) to catch drift between what was intended here and what actually got built — then merge the results.
 
 ## What this project is
-MailPilot is an AI email assistant that connects to a user's Gmail account and automatically triages incoming mail — classifying by priority/category and applying a single `MailPilot/Priority` label to what needs attention — so the user spends less time on manual sorting. Phase 1 = triage only. Phase 2 (not yet in scope) = Smart Unsubscribe (subscription scanner, bulk unsubscribe, mute). No reply drafting, no voice assistant planned currently.
+MailPilot is an AI email assistant that connects to a user's Gmail account and automatically triages incoming mail — classifying by priority/category and applying a single `MailPilot/Priority` label to what needs attention — so the user spends less time on manual sorting. Phase 1 = triage only. Phase 2 (not yet in scope) = Smart Unsubscribe (subscription scanner, bulk unsubscribe, mute). Phase 3 (not yet in scope, decided 2026-08-23) = Reply Drafting — see "Future phase: Reply Drafting" below. No voice assistant planned currently.
+
+## Future phase: Reply Drafting (Phase 3 — not yet started)
+Decided 2026-08-23, inspired by competitor "Tame My Inbox" (their "IRIS" assistant / "Quick Replies" feature). Do not build any part of this until Phase 1 (triage) and Phase 2 (Smart Unsubscribe) are both live — this section exists to capture the design intent now, before it's forgotten, not to greenlight starting it.
+
+- **Scope:** for a subset of `Human`-category emails classified as short/simple (e.g. a quick yes/no/confirmation reply), generate a draft reply via a second Claude call, using the same transient-content pattern already used for classification (full body sent to Claude for that one call, never persisted).
+- **Delivery mechanism — write the draft directly into Gmail as a real Gmail Draft** (`drafts.create` via the Gmail API), the same way the Priority label is written directly into Gmail today. Do **not** store draft text in our own database — same zero-content-storage principle as email bodies, applied to generated content too.
+- **MailPilot must never call Gmail's Send API.** The draft sits in Gmail, unsent, until the user reviews/edits and sends it themselves natively in Gmail. This is a deliberate scope boundary: creating a discardable, reversible draft is an additive action similar to labeling; actually sending an email on the user's behalf is a fundamentally different, much higher-trust action that this project is not taking on.
+- **OAuth scope impact:** this will require declaring and requesting a wider Gmail scope (likely `gmail.compose`, or confirm whether `gmail.modify` already covers draft creation) — per the existing hard rule below, this needs explicit approval and reconsideration of the Google verification review before implementation starts, not something to slip in incidentally.
+- **Dashboard impact:** a new "Quick Replies" section, distinct from the existing Priority list, showing each drafted reply's text so the user can judge it before ever opening Gmail.
 
 ## Tech stack + versions that matter
 - Frontend: Next.js 14 (App Router), TypeScript, Tailwind CSS
