@@ -49,3 +49,17 @@ export function decrypt(ciphertext: string): string {
   decipher.setAuthTag(authTag);
   return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
 }
+
+export * from "./label.js";
+
+// Pulls the bare address out of a Gmail "From" header (e.g. `Google Play
+// <googleplay-noreply@google.com>` -> `googleplay-noreply@google.com`).
+// Used only for the correction-signal rule match (CLAUDE.md's narrow,
+// user-triggered exception to never storing sender) — never for anything
+// else.
+export function extractEmailAddress(fromHeader: string): string | null {
+  const angleMatch = fromHeader.match(/<([^>]+)>/);
+  if (angleMatch) return angleMatch[1].trim().toLowerCase();
+  const trimmed = fromHeader.trim();
+  return trimmed.includes("@") ? trimmed.toLowerCase() : null;
+}

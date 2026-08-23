@@ -2,11 +2,11 @@ import { Worker } from "bullmq";
 import { Redis as IORedis } from "ioredis";
 import { google } from "googleapis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { BACKLOG_QUEUE_NAME, decrypt, type BacklogJobData } from "shared";
+import { BACKLOG_QUEUE_NAME, applyPriorityLabel, decrypt, type BacklogJobData } from "shared";
 import { fetchGmailMessagesForRange } from "../gmail/fetch.js";
 import { classifyEmail } from "../classification/classify.js";
 import { persistClassification } from "../classification/persist.js";
-import { applyPriorityLabel } from "../gmail/label.js";
+import { applyCorrectionOverride } from "../classification/applyCorrectionOverride.js";
 import { getRemainingDailyCapacity, incrementDailyCount, msUntilNextReset } from "../limits/dailyCap.js";
 import { getBacklogQueue } from "./queue.js";
 
@@ -24,6 +24,29 @@ async function alreadyProcessedIds(supabase: SupabaseClient, userId: string, ids
     .in("gmail_message_id", ids);
   if (error) throw error;
   return new Set((data ?? []).map((row) => row.gmail_message_id));
+}
+
+// US-3: a user's manual correction is remembered per-sender (CLAUDE.md's
+// narrow, user-triggered exception to never storing sender) and always
+// wins over the AI's own call for that sender going forward — a real
+// override, not just a soft hint the model might disregard.
+async function loadSenderCorrectionRules(supabase: SupabaseClient, userId: string): Promise<Map<string, boolean>> {
+  const { data, error } = await supabase
+    .from("rules")
+    .select("rule_data")
+    .eq("user_id", userId)
+    .eq("rule_type", "correction_signal")
+    .eq("active", true);
+  if (error) throw error;
+
+  const rules = new Map<string, boolean>();
+  for (const row of data ?? []) {
+    const ruleData = row.rule_data as { sender?: string; priority?: boolean };
+    if (ruleData.sender && typeof ruleData.priority === "boolean") {
+      rules.set(ruleData.sender, ruleData.priority);
+    }
+  }
+  return rules;
 }
 
 export function startBacklogWorker() {
@@ -68,6 +91,8 @@ export function startBacklogWorker() {
       const pending = allMessages.filter((m) => !doneIds.has(m.gmailMessageId));
       console.log(`[backlog-worker] ${pending.length} message(s) not yet processed`);
 
+      const senderRules = await loadSenderCorrectionRules(supabase, userId);
+
       const { remaining, resetAt } = await getRemainingDailyCapacity(supabase, userId);
       const toProcess = pending.slice(0, remaining);
       const leftover = pending.length - toProcess.length;
@@ -81,7 +106,9 @@ export function startBacklogWorker() {
         const batch = toProcess.slice(i, i + CONCURRENCY);
         const flags = await Promise.all(
           batch.map(async (message) => {
-            const classification = await classifyEmail(message);
+            const aiClassification = await classifyEmail(message);
+            const classification = applyCorrectionOverride(aiClassification, message.from, senderRules);
+
             const { emailId } = await persistClassification(supabase, {
               userId,
               gmailMessageId: message.gmailMessageId,

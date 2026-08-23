@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { CorrectionButton } from "../correction-button";
 
 export interface AllEmailsItem {
   id: string;
@@ -92,29 +93,34 @@ export function AllEmailsList({ items }: { items: AllEmailsItem[] }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 22, delay: i * 0.03 }}
             >
-              <a
-                href={`https://mail.google.com/mail/u/0/#all/${item.gmailThreadId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-xl border border-border bg-surface p-5 shadow-glow transition-transform hover:-translate-y-0.5"
-              >
-                <div className="flex items-baseline justify-between gap-4">
-                  <p className="truncate text-sm font-semibold text-foreground">{item.from}</p>
-                  <p className="shrink-0 text-xs text-text-secondary">
-                    {new Date(item.receivedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </p>
+              <div className="rounded-xl border border-border bg-surface p-5 shadow-glow transition-transform hover:-translate-y-0.5">
+                <a
+                  href={`https://mail.google.com/mail/u/0/#all/${item.gmailThreadId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block"
+                >
+                  <div className="flex items-baseline justify-between gap-4">
+                    <p className="truncate text-sm font-semibold text-foreground">{item.from}</p>
+                    <p className="shrink-0 text-xs text-text-secondary">
+                      {new Date(item.receivedAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-foreground">{item.subject}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-medium text-text-secondary">
+                      {getDisplayBucket(item, filter)}
+                    </span>
+                    {item.reason && <p className="truncate text-xs text-text-secondary">{item.reason}</p>}
+                  </div>
+                </a>
+                <div className="mt-3 flex justify-end">
+                  <CorrectionButton emailId={item.id} currentPriority={item.priorityFlagged} />
                 </div>
-                <p className="mt-1 truncate text-sm text-foreground">{item.subject}</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="shrink-0 rounded-full bg-background px-2 py-0.5 text-[10px] font-medium text-text-secondary">
-                    {getDisplayBucket(item, filter)}
-                  </span>
-                  {item.reason && <p className="truncate text-xs text-text-secondary">{item.reason}</p>}
-                </div>
-              </a>
+              </div>
             </motion.li>
           ))}
         </ul>
