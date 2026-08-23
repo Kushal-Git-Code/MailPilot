@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
+import { getUndoableEmailIds } from "@/lib/undoability";
 import { LogoutButton } from "./logout-button";
 import { PriorityList, type PriorityListItem } from "./priority-list";
+
+// This page's data (classifications, corrections, undo availability) can
+// change from one visit to the next — never let Next.js cache a stale
+// server-rendered response here.
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -50,6 +56,15 @@ export default async function DashboardPage() {
         )
       : new Map();
 
+  const undoableIds =
+    emails.length > 0
+      ? await getUndoableEmailIds(
+          supabase,
+          user.id,
+          emails.map((e) => e.id)
+        )
+      : new Set<string>();
+
   const items: PriorityListItem[] = emails.map((e) => {
     const info = displayMap.get(e.gmail_message_id);
     return {
@@ -59,6 +74,7 @@ export default async function DashboardPage() {
       subject: info?.subject ?? "(no subject)",
       reason: e.classification_reason ?? "",
       receivedAt: e.received_at,
+      undoable: undoableIds.has(e.id),
     };
   });
 

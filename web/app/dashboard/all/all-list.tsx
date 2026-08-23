@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { CorrectionButton } from "../correction-button";
+import { UndoButton } from "../undo-button";
 
 export interface AllEmailsItem {
   id: string;
@@ -13,6 +14,7 @@ export interface AllEmailsItem {
   receivedAt: string;
   category: string | null;
   priorityFlagged: boolean;
+  undoable: boolean;
 }
 
 type FilterOption = "All" | "Needs You" | "Primary" | "Alerts" | "Newsletters" | "Transactional" | "Other";
@@ -117,7 +119,8 @@ export function AllEmailsList({ items }: { items: AllEmailsItem[] }) {
                     {item.reason && <p className="truncate text-xs text-text-secondary">{item.reason}</p>}
                   </div>
                 </a>
-                <div className="mt-3 flex justify-end">
+                <div className="mt-3 flex items-center justify-end gap-3">
+                  {item.undoable && <UndoButton emailId={item.id} />}
                   <CorrectionButton emailId={item.id} currentPriority={item.priorityFlagged} />
                 </div>
               </div>

@@ -58,15 +58,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
     .eq("id", emailRow.id);
   if (updateError) throw updateError;
 
-  await supabase.from("audit_log").insert({
-    user_id: user.id,
-    email_id: emailRow.id,
-    action: "correction_made",
-    previous_state: { priority_flagged: emailRow.priority_flagged },
-    new_state: { priority_flagged: correctedPriority },
-    reversible_until: new Date(Date.now() + 30 * 24 * 3600_000).toISOString(),
-  });
-
   // Remember this sender's preference going forward (US-3) — the one
   // narrow, user-triggered exception to never storing sender, per
   // CLAUDE.md. Live-fetched only now, only because this is an explicit
@@ -75,6 +66,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const displayMap = await getEmailDisplayInfo(gmail, [emailRow.gmail_message_id]);
   const senderAddress = extractEmailAddress(displayMap.get(emailRow.gmail_message_id)?.from ?? "");
 
+  let ruleId: string | null = null;
   if (senderAddress) {
     await supabase
       .from("rules")
@@ -83,13 +75,29 @@ export async function POST(request: Request, { params }: { params: { id: string 
       .eq("rule_type", "correction_signal")
       .contains("rule_data", { sender: senderAddress });
 
-    await supabase.from("rules").insert({
-      user_id: user.id,
-      rule_type: "correction_signal",
-      rule_data: { sender: senderAddress, priority: correctedPriority },
-      active: true,
-    });
+    const { data: newRule } = await supabase
+      .from("rules")
+      .insert({
+        user_id: user.id,
+        rule_type: "correction_signal",
+        rule_data: { sender: senderAddress, priority: correctedPriority },
+        active: true,
+      })
+      .select("id")
+      .single();
+    ruleId = newRule?.id ?? null;
   }
+
+  // ruleId travels with this audit entry so undo (Step 29) can deactivate
+  // the exact rule this correction created, not just flip the flag back.
+  await supabase.from("audit_log").insert({
+    user_id: user.id,
+    email_id: emailRow.id,
+    action: "correction_made",
+    previous_state: { priority_flagged: emailRow.priority_flagged },
+    new_state: { priority_flagged: correctedPriority, ruleId },
+    reversible_until: new Date(Date.now() + 30 * 24 * 3600_000).toISOString(),
+  });
 
   return NextResponse.json({ ok: true });
 }

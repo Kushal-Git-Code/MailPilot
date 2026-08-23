@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { CorrectionButton } from "./correction-button";
+import { UndoButton } from "./undo-button";
 
 export interface PriorityListItem {
   id: string;
@@ -10,6 +11,7 @@ export interface PriorityListItem {
   subject: string;
   reason: string;
   receivedAt: string;
+  undoable: boolean;
 }
 
 export function PriorityList({ items }: { items: PriorityListItem[] }) {
@@ -41,7 +43,8 @@ export function PriorityList({ items }: { items: PriorityListItem[] }) {
               <p className="mt-1 truncate text-sm text-foreground">{item.subject}</p>
               <p className="mt-2 text-xs text-text-secondary">{item.reason}</p>
             </a>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex items-center justify-end gap-3">
+              {item.undoable && <UndoButton emailId={item.id} />}
               <CorrectionButton emailId={item.id} currentPriority={true} />
             </div>
           </div>
