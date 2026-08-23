@@ -11,7 +11,7 @@
 | Onboarding — Connect Gmail | `/onboarding/connect` | Google OAuth consent for Gmail access |
 | Onboarding — Backlog range | `/onboarding/backlog` | User picks the date range for initial classification |
 | Dashboard (Inbox) | `/dashboard` | Primary screen — list of emails flagged `Priority`, "all caught up" empty state when none |
-| Browse / All categories | `/dashboard/all` | Secondary view — everything classified, grouped by user-customizable category |
+| Browse / All categories | `/dashboard/all` | Secondary view — everything classified, grouped by the default category display names (see "Default Category Display Names" below); user-customizable in `/settings/categories` |
 | Settings — Account | `/settings/account` | Profile, connected Gmail account, disconnect |
 | Settings — Categories | `/settings/categories` | Manage custom classification categories |
 | Settings — Plan | `/settings/plan` | Free tier usage (of 75/day cap), upgrade path (future) |
@@ -57,6 +57,25 @@ If a logged-in user's Gmail token has been revoked externally (detected on next 
 2. Sees either: (a) a short list of emails flagged `Priority` with one-line reasons, or (b) the "You're all caught up" empty state if nothing needs attention.
 3. User clicks an email → opens directly in Gmail (new tab) to read/reply — MailPilot does not replicate an email reading/reply UI in Phase 1.
 4. If a classification felt wrong, user clicks a small "Not priority" or "Actually priority" correction control inline — this updates the label immediately and is logged for future rule learning (US-3).
+
+---
+
+## Default Category Display Names
+
+Decided 2026-08-23. The AI's internal classification categories (`Human`/`Notification`/`Newsletter`/`Transactional`/`Normal-Uncategorized`, defined in `worker/src/classification/classify.ts` and tuned against `/evals`) stay exactly as-is — this section only maps them to **user-facing display labels** shown on `/dashboard` and `/dashboard/all`. This is a display-layer mapping only; it does not touch the classification prompt/schema and needs no eval re-run.
+
+| Internal category (unchanged) | Default display label | What a user sees there |
+|---|---|---|
+| `priority: true` (any category) | **Needs You** | Cuts across all categories — a real ask from a person, or an automated message with a real deadline. This is what `/dashboard` (the primary screen) shows today. |
+| `Human`, `priority: false` | **Primary** | Real person, nothing urgent — named after Gmail's own "Primary" tab so it needs no new explanation. |
+| `Notification` | **Alerts** | Automated account/security/calendar/survey messages. |
+| `Newsletter` | **Newsletters** | Unchanged — also the category Phase 2 (Smart Unsubscribe) will act on. |
+| `Transactional` | **Transactional** | Unchanged — purchases, billing, bookings. |
+| `Normal/Uncategorized` | **Other** | Catch-all. |
+
+**Future refinement (once Phase 3, Reply Drafting, exists):** "Needs You" may split into three, matching how Tame My Inbox's real product breaks down urgency (confirmed against an actual screenshot of their app, not just their marketing copy): **Needs You** (a person, needs real judgment), **Quick Reply** (short/simple response — the exact subset Phase 3 targets), and **Has a Deadline** (automated but time-sensitive). Not built now — noted here so the intent isn't lost.
+
+**Design constraint to respect when building `/dashboard/all` (Step 27):** `docs/ui-ux-brief.md` explicitly calls for "still no dense multi-color category dashboards" — this table is 4-6 labels, not an invitation to build a busy multi-panel view. Keep it restrained: one focal list per view, consistent with the rest of the brief.
 
 ---
 
