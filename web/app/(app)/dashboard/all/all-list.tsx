@@ -18,11 +18,15 @@ export interface AllEmailsItem {
   undoable: boolean;
 }
 
-type FilterOption = "All" | "Needs You" | "Primary" | "Alerts" | "Newsletters" | "Transactional" | "Other";
+// Was a fixed union of the 5 defaults — now a plain string, since Step 32's
+// custom categories are real, per-user, dynamic filter/badge values too, not
+// just the fixed set the AI originally shipped with.
+type FilterOption = string;
 
-const FILTER_OPTIONS: FilterOption[] = ["All", "Needs You", "Primary", "Alerts", "Newsletters", "Transactional", "Other"];
+const DEFAULT_FILTER_OPTIONS = ["All", "Needs You", "Primary", "Alerts", "Newsletters", "Transactional", "Other"];
+const DEFAULT_INTERNAL_CATEGORIES = ["Human", "Notification", "Newsletter", "Transactional"];
 
-function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): Exclude<FilterOption, "All"> {
+function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): string {
   // Under a specific tab, the badge must say why the item is in *that*
   // list (matching what you filtered for) — not a fixed priority-first
   // label that can contradict the tab you're looking at. Only "All" falls
@@ -39,7 +43,10 @@ function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): Excl
     case "Transactional":
       return "Transactional";
     default:
-      return "Other";
+      // A custom category's internal name and display name are the same
+      // (the user typed it themselves) — anything left over that isn't a
+      // known default falls back to "Other", same as always.
+      return item.category ?? "Other";
   }
 }
 
@@ -58,18 +65,31 @@ function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
     case "Transactional":
       return item.category === "Transactional";
     case "Other":
-      return !["Human", "Notification", "Newsletter", "Transactional"].includes(item.category ?? "");
+      return !DEFAULT_INTERNAL_CATEGORIES.includes(item.category ?? "");
+    default:
+      // A custom category filter — match by the exact category name.
+      return item.category === filter;
   }
 }
 
-export function AllEmailsList({ items }: { items: AllEmailsItem[] }) {
+export function AllEmailsList({
+  items,
+  customCategories,
+}: {
+  items: AllEmailsItem[];
+  customCategories: string[];
+}) {
+  const filterOptions = useMemo(
+    () => [...DEFAULT_FILTER_OPTIONS, ...customCategories],
+    [customCategories]
+  );
   const [filter, setFilter] = useState<FilterOption>("All");
   const filtered = useMemo(() => items.filter((item) => matchesFilter(item, filter)), [items, filter]);
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap gap-2">
-        {FILTER_OPTIONS.map((option) => (
+        {filterOptions.map((option) => (
           <button
             key={option}
             type="button"
@@ -122,7 +142,11 @@ export function AllEmailsList({ items }: { items: AllEmailsItem[] }) {
                 </a>
                 <div className="mt-3 flex items-center justify-end gap-3">
                   {item.undoable && <UndoButton emailId={item.id} />}
-                  <CategoryCorrectionSelect emailId={item.id} currentCategory={item.category} />
+                  <CategoryCorrectionSelect
+                    emailId={item.id}
+                    currentCategory={item.category}
+                    customCategories={customCategories}
+                  />
                   <CorrectionButton emailId={item.id} currentPriority={item.priorityFlagged} />
                 </div>
               </div>

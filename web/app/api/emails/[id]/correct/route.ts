@@ -27,8 +27,24 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (hasPriority && typeof correctedPriority !== "boolean") {
     return NextResponse.json({ error: "priority must be a boolean" }, { status: 400 });
   }
-  if (hasCategory && !(DEFAULT_CATEGORIES as readonly string[]).includes(correctedCategory)) {
-    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  if (hasCategory) {
+    // Valid targets are the 5 defaults plus this user's own active custom
+    // categories (Step 32) — without this, the correction dropdown could
+    // offer a custom category the server would then reject.
+    const { data: customCategoryRules } = await supabase
+      .from("rules")
+      .select("rule_data")
+      .eq("user_id", user.id)
+      .eq("rule_type", "category_definition")
+      .eq("active", true);
+    const customCategoryNames = (customCategoryRules ?? [])
+      .map((row) => (row.rule_data as { name?: string }).name)
+      .filter((name): name is string => Boolean(name));
+
+    const validCategories: readonly string[] = [...DEFAULT_CATEGORIES, ...customCategoryNames];
+    if (!validCategories.includes(correctedCategory)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
   }
 
   const { data: emailRow } = await supabase

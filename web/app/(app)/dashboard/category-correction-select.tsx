@@ -7,9 +7,11 @@ import { CATEGORY_VALUES, CATEGORY_DISPLAY_NAMES } from "@/lib/categoryDisplay";
 export function CategoryCorrectionSelect({
   emailId,
   currentCategory,
+  customCategories,
 }: {
   emailId: string;
   currentCategory: string | null;
+  customCategories: string[];
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,13 @@ export function CategoryCorrectionSelect({
       {CATEGORY_VALUES.map((value) => (
         <option key={value} value={value}>
           {CATEGORY_DISPLAY_NAMES[value]}
+        </option>
+      ))}
+      {customCategories.map((name) => (
+        // A custom category's display name is whatever the user typed —
+        // no separate mapping needed, unlike the defaults above.
+        <option key={name} value={name}>
+          {name}
         </option>
       ))}
     </select>

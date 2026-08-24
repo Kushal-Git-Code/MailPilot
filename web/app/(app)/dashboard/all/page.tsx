@@ -71,6 +71,21 @@ export default async function AllEmailsPage() {
         )
       : new Set<string>();
 
+  // Step 32's custom categories need to appear as real filter/correction
+  // options here too — the classifier already uses them, this was the
+  // explicitly-flagged fast-follow to make them visible in the UI as well.
+  const { data: categoryRules } = await supabase
+    .from("rules")
+    .select("rule_data")
+    .eq("user_id", user.id)
+    .eq("rule_type", "category_definition")
+    .eq("active", true)
+    .order("created_at", { ascending: true });
+
+  const customCategories = (categoryRules ?? [])
+    .map((row) => (row.rule_data as { name?: string }).name)
+    .filter((name): name is string => Boolean(name));
+
   const items: AllEmailsItem[] = emails.map((e) => {
     const info = displayMap.get(e.gmail_message_id);
     return {
@@ -123,7 +138,7 @@ export default async function AllEmailsPage() {
             </p>
           </div>
         ) : (
-          <AllEmailsList items={items} />
+          <AllEmailsList items={items} customCategories={customCategories} />
         )}
       </div>
     </main>
