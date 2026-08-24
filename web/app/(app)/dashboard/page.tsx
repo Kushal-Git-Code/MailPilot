@@ -28,7 +28,7 @@ export default async function DashboardPage() {
         <div className="blob blob-1 -left-20 -top-20 h-72 w-72 bg-accent" />
         <div className="blob blob-2 -bottom-24 -right-10 h-80 w-80 bg-secondary" />
         <div className="relative z-10 w-full max-w-md rounded-2xl bg-surface p-8 text-center shadow-glow">
-          <h1 className="text-xl font-semibold text-foreground">Gmail not connected</h1>
+          <h1 className="font-display text-xl font-bold text-foreground">Gmail not connected</h1>
           <p className="mt-3 text-sm text-text-secondary">
             Connect your Gmail account to start seeing your triaged inbox here.
           </p>
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
 
   const { data: flaggedEmails } = await supabase
     .from("emails")
-    .select("id, gmail_message_id, gmail_thread_id, classification_reason, received_at")
+    .select("id, gmail_message_id, gmail_thread_id, classification_reason, received_at, category")
     .eq("user_id", user.id)
     .eq("priority_flagged", true)
     .order("received_at", { ascending: false });
@@ -79,6 +79,7 @@ export default async function DashboardPage() {
       subject: info?.subject ?? "(no subject)",
       reason: e.classification_reason ?? "",
       receivedAt: e.received_at,
+      category: e.category,
       undoable: undoableIds.has(e.id),
     };
   });
@@ -91,7 +92,7 @@ export default async function DashboardPage() {
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">
+            <h1 className="font-display text-xl font-bold text-foreground">
               {items.length > 0 ? `Needs You (${items.length})` : "MailPilot"}
             </h1>
             <a href="/dashboard/all" className="text-xs font-medium text-accent hover:underline">
@@ -116,7 +117,7 @@ export default async function DashboardPage() {
 
         {items.length === 0 ? (
           <div className="rounded-2xl bg-surface p-10 text-center shadow-glow">
-            <h2 className="text-xl font-semibold text-foreground">You&apos;re all caught up</h2>
+            <h2 className="font-display text-xl font-bold text-foreground">You&apos;re all caught up</h2>
             <p className="mt-2 text-sm text-text-secondary">
               MailPilot is watching your inbox — you&apos;ll see anything that needs you here.
             </p>

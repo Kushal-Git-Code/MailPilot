@@ -3,13 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --background: #f0f9ff;
-  --foreground: #1e1b4b;
+  --background: #fff9f3;
+  --foreground: #1b2a4a;
 }
 
+/* Interior pages get a calm, near-flat warm background — the login page's
+   full animated sunset gradient is a marketing moment, not a daily-use
+   surface (design-system review, section 01/02). A restrained echo of the
+   same warmth, not the same intensity. */
 body {
   color: var(--foreground);
-  background: linear-gradient(135deg, #fdf4ff 0%, #f0f9ff 100%);
+  background: linear-gradient(180deg, #fff9f3 0%, #fff3e8 100%);
   background-attachment: fixed;
 }
 

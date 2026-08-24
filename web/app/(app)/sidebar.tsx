@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "./dashboard/logout-button";
+import { initialsFrom, avatarColorFor } from "@/lib/avatarColor";
 
 interface NavLinkItem {
   label: string;
@@ -20,14 +21,36 @@ const LINKS: NavLinkItem[] = [
 ];
 const COMING_SOON = ["Commitments", "Unsubscribe"];
 
-function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
+interface SidebarContentsProps {
+  displayName: string;
+  email: string;
+  onNavigate?: () => void;
+}
+
+function SidebarContents({ displayName, email, onNavigate }: SidebarContentsProps) {
   const pathname = usePathname();
 
   return (
     <div className="flex h-full flex-col">
-      <div className="px-5 pb-6 pt-6">
-        <span className="text-lg font-semibold text-foreground">MailPilot</span>
+      <div className="px-5 pb-4 pt-6">
+        <span className="font-display text-lg font-bold text-foreground">MailPilot</span>
       </div>
+
+      {displayName && (
+        <div className="mx-3 mb-4 flex items-center gap-2.5 rounded-xl bg-surface-tint px-3 py-2.5">
+          <div
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${avatarColorFor(displayName)}`}
+          >
+            {initialsFrom(displayName)}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+            {email && email !== displayName && (
+              <p className="truncate text-xs text-text-secondary">{email}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 space-y-1 px-3">
         {LINKS.map((item) => {
@@ -40,8 +63,8 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
               aria-current={active ? "page" : undefined}
               className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-accent text-white shadow-glow"
-                  : "text-text-secondary hover:bg-background hover:text-foreground"
+                  ? "bg-gradient-to-r from-accent to-secondary text-white shadow-glow"
+                  : "text-text-secondary hover:bg-surface-tint hover:text-foreground"
               }`}
             >
               {item.label}
@@ -53,10 +76,10 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
           <div
             key={label}
             aria-disabled="true"
-            className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-text-secondary opacity-50"
+            className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-text-secondary opacity-45"
           >
             <span>{label}</span>
-            <span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+            <span className="rounded-full bg-surface-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
               Soon
             </span>
           </div>
@@ -70,19 +93,19 @@ function SidebarContents({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ displayName, email }: { displayName: string; email: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <>
       {/* Desktop: persistent sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-surface md:block">
-        <SidebarContents />
+      <aside className="hidden w-64 shrink-0 border-r border-border bg-surface md:block">
+        <SidebarContents displayName={displayName} email={email} />
       </aside>
 
       {/* Mobile: hamburger toggle + slide-in drawer */}
       <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
-        <span className="text-lg font-semibold text-foreground">MailPilot</span>
+        <span className="font-display text-lg font-bold text-foreground">MailPilot</span>
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -108,7 +131,7 @@ export function Sidebar() {
             aria-hidden="true"
           />
           <aside className="absolute inset-y-0 left-0 w-64 bg-surface shadow-glow">
-            <SidebarContents onNavigate={() => setMobileOpen(false)} />
+            <SidebarContents displayName={displayName} email={email} onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
