@@ -1,10 +1,9 @@
 // Lightweight cross-links between Settings sub-pages — not a client component,
 // no interactivity needed beyond plain links, so this stays server-rendered.
-// Only Account and Plan exist so far; Categories (Step 32) will be added here
-// once it's actually built, not before.
 const TABS = [
   { key: "account", label: "Account", href: "/settings/account" },
   { key: "plan", label: "Plan & usage", href: "/settings/plan" },
+  { key: "categories", label: "Categories", href: "/settings/categories" },
 ] as const;
 
 export function SettingsTabs({ active }: { active: (typeof TABS)[number]["key"] }) {

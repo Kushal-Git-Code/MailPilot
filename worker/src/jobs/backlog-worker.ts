@@ -4,7 +4,7 @@ import { google } from "googleapis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { BACKLOG_QUEUE_NAME, applyPriorityLabel, decrypt, type BacklogJobData, type DefaultCategory } from "shared";
 import { listGmailMessageRefs, fetchFullMessages } from "../gmail/fetch.js";
-import { classifyEmail } from "../classification/classify.js";
+import { classifyEmail, type CustomCategory } from "../classification/classify.js";
 import { persistClassification } from "../classification/persist.js";
 import { applyCorrectionOverride, applyCategoryOverride } from "../classification/applyCorrectionOverride.js";
 import { getRemainingDailyCapacity, incrementDailyCount, msUntilNextReset } from "../limits/dailyCap.js";
@@ -94,6 +94,29 @@ async function loadSenderCategoryRules(supabase: SupabaseClient, userId: string)
   return rules;
 }
 
+// Step 32: this user's own defined categories, fed straight into the
+// classifier's dynamically-built schema/prompt (see classify.ts). Loaded
+// once per job, not once per email — same category list applies to every
+// message in a batch.
+async function loadCustomCategories(supabase: SupabaseClient, userId: string): Promise<CustomCategory[]> {
+  const { data, error } = await supabase
+    .from("rules")
+    .select("rule_data")
+    .eq("user_id", userId)
+    .eq("rule_type", "category_definition")
+    .eq("active", true);
+  if (error) throw error;
+
+  const categories: CustomCategory[] = [];
+  for (const row of data ?? []) {
+    const ruleData = row.rule_data as { name?: string; description?: string };
+    if (ruleData.name && ruleData.description) {
+      categories.push({ name: ruleData.name, description: ruleData.description });
+    }
+  }
+  return categories;
+}
+
 export function startBacklogWorker() {
   const connection = new IORedis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
   const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -147,6 +170,7 @@ export function startBacklogWorker() {
 
       const senderRules = await loadSenderCorrectionRules(supabase, userId);
       const senderCategoryRules = await loadSenderCategoryRules(supabase, userId);
+      const customCategories = await loadCustomCategories(supabase, userId);
 
       const { remaining, resetAt } = await getRemainingDailyCapacity(supabase, userId);
       const toProcess = pending.slice(0, remaining);
@@ -161,7 +185,7 @@ export function startBacklogWorker() {
         const batch = toProcess.slice(i, i + CONCURRENCY);
         const flags = await Promise.all(
           batch.map(async (message) => {
-            const aiClassification = await classifyEmail(message);
+            const aiClassification = await classifyEmail(message, customCategories);
             const priorityApplied = applyCorrectionOverride(aiClassification, message.from, senderRules);
             const classification = applyCategoryOverride(priorityApplied, message.from, senderCategoryRules);
 

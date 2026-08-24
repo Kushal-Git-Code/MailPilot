@@ -4,18 +4,19 @@ import { z } from "zod";
 import { DEFAULT_CATEGORIES } from "shared";
 import type { FetchedMessage } from "../gmail/fetch.js";
 
-export const ClassificationSchema = z.object({
-  priority: z.boolean().describe("True if this email needs the user's direct attention/action."),
-  category: z.enum(DEFAULT_CATEGORIES),
-  reason: z
-    .string()
-    .describe("One short sentence explaining the classification — never a quote/excerpt of the email."),
-  confidence: z.number().min(0).max(1).optional(),
-});
+// Step 32: a user's own custom categories (rules.rule_type: "category_definition").
+// Structured output constrains Claude to literally only return one of the
+// enum values baked into the schema at call time — there is no way to "just
+// mention" an extra category in the prompt without it. So the schema/prompt
+// must be built per-user, unioning the 5 defaults with whatever this
+// specific user has defined. No custom categories → identical schema/prompt
+// to before this existed, which is what keeps the /evals baseline valid.
+export interface CustomCategory {
+  name: string;
+  description: string;
+}
 
-export type Classification = z.infer<typeof ClassificationSchema>;
-
-const SYSTEM_PROMPT = `You are MailPilot's email triage classifier. Given one email's subject, sender, and body, decide:
+const BASE_SYSTEM_PROMPT = `You are MailPilot's email triage classifier. Given one email's subject, sender, and body, decide:
 
 1. priority: true if EITHER of these is true:
    - It's a real question, request, or matter from a person genuinely expecting a reply or action, OR
@@ -26,24 +27,74 @@ const SYSTEM_PROMPT = `You are MailPilot's email triage classifier. Given one em
    - "Notification": automated account/security/app alerts, verification/OTP codes, calendar invites, survey or feedback requests — anything automated that isn't a purchase/billing/travel record
    - "Newsletter": subscribed content, digests, marketing
    - "Transactional": purchase receipts, order/shipping confirmations, invoices, travel booking confirmations
-   - "Normal / Uncategorized": only for messages that genuinely don't fit any category above
-3. reason: one short sentence explaining why — describe the situation, never quote or excerpt the email's actual content.
+   - "Normal / Uncategorized": only for messages that genuinely don't fit any category above`;
+
+const BASE_SYSTEM_PROMPT_TAIL = `3. reason: one short sentence explaining why — describe the situation, never quote or excerpt the email's actual content.
 4. confidence: your confidence in this classification, 0 to 1.
 
 Bias toward priority=true when genuinely uncertain — missing something urgent is worse than an extra flagged email.`;
 
+function buildSchemaAndPrompt(customCategories: CustomCategory[]) {
+  if (customCategories.length === 0) {
+    return {
+      schema: z.object({
+        priority: z.boolean().describe("True if this email needs the user's direct attention/action."),
+        category: z.enum(DEFAULT_CATEGORIES),
+        reason: z
+          .string()
+          .describe("One short sentence explaining the classification — never a quote/excerpt of the email."),
+        confidence: z.number().min(0).max(1).optional(),
+      }),
+      systemPrompt: `${BASE_SYSTEM_PROMPT}\n${BASE_SYSTEM_PROMPT_TAIL}`,
+    };
+  }
+
+  // z.enum requires a non-empty tuple of string literals, not a plain
+  // string[] — spread into a tuple so TypeScript accepts the dynamic union.
+  const allCategoryNames = [...DEFAULT_CATEGORIES, ...customCategories.map((c) => c.name)] as [
+    string,
+    ...string[],
+  ];
+  const customCategoryLines = customCategories
+    .map((c) => `   - "${c.name}": ${c.description}`)
+    .join("\n");
+
+  return {
+    schema: z.object({
+      priority: z.boolean().describe("True if this email needs the user's direct attention/action."),
+      category: z.enum(allCategoryNames),
+      reason: z
+        .string()
+        .describe("One short sentence explaining the classification — never a quote/excerpt of the email."),
+      confidence: z.number().min(0).max(1).optional(),
+    }),
+    systemPrompt: `${BASE_SYSTEM_PROMPT}\n\nThis user has also defined their own categories — prefer one of these over a default when the email genuinely matches it better:\n${customCategoryLines}\n${BASE_SYSTEM_PROMPT_TAIL}`,
+  };
+}
+
+export type Classification = {
+  priority: boolean;
+  category: string;
+  reason: string;
+  confidence?: number;
+};
+
 const client = new Anthropic();
 
-export async function classifyEmail(email: FetchedMessage): Promise<Classification> {
+export async function classifyEmail(
+  email: FetchedMessage,
+  customCategories: CustomCategory[] = []
+): Promise<Classification> {
   const userContent = `Subject: ${email.subject}\nFrom: ${email.from}\n\n${email.body || email.snippet}`;
+  const { schema, systemPrompt } = buildSchemaAndPrompt(customCategories);
 
   const response = await client.messages.parse({
     model: "claude-haiku-4-5",
     max_tokens: 512,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: [{ role: "user", content: userContent }],
     output_config: {
-      format: zodOutputFormat(ClassificationSchema),
+      format: zodOutputFormat(schema),
     },
   });
 
