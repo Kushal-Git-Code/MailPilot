@@ -74,10 +74,12 @@ Numbered, dependency-ordered build sequence. The app should compile and run afte
 
 ---
 
-## Phase 8: UI Polish
+## Phase 8: UI/UX Redesign & Polish
 
-36. **[S]** Apply motion (fade/slide on classification) per `docs/ui-ux-brief.md`.
-37. **[S]** Verify WCAG AA contrast on the sage green accent against cream background; adjust if needed (flagged as unverified in the design brief).
+**Scope note (added 2026-08-24):** this phase now covers a full UI/UX redesign pass, not just polish on top of an assumed-final design — informed by competitor research (Tame My Inbox, Quell) and the user's own custom login page + color palette (shared separately, in a dedicated design-review conversation before implementation starts). Deliberately placed here, after Phase 7 (every page in the app exists by then, so the redesign touches each once, not twice) and before Phase 9 (so E2E tests get written against the final UI once, not rewritten after a later redesign breaks their selectors).
+
+36. **[L]** Full UI/UX redesign pass — color system, button hierarchy (clear primary vs secondary, not equal-weight actions), category/priority display treatment, and whether to adopt structural elements like a persistent sidebar (already scoped in Step 34) vs. keep the current single-page card-list layout. Applied consistently across every existing page (dashboard, `/dashboard/all`, onboarding, settings) — not just whichever was built most recently. Includes motion/interaction feel (fade/slide, button press/hover) as part of the same pass, not a separate afterthought.
+37. **[S]** Verify WCAG AA contrast for the finalized accent color(s) against the background; adjust if needed (the original design brief's sage-green-on-cream pairing was already flagged as unverified, and may not even be the final palette after Step 36).
 38. **[M]** Mobile responsiveness pass across all pages.
 39. **[S]** Build and polish all empty/error states listed in `docs/app-flow.md` — no generic "no data" or raw error messages anywhere.
 
