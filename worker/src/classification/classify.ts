@@ -26,7 +26,7 @@ const BASE_SYSTEM_PROMPT = `You are MailPilot's email triage classifier. Given o
    - "Human": a real message from a person expecting a reply or action
    - "Notification": automated account/security/app alerts, verification/OTP codes, calendar invites, survey or feedback requests — anything automated that isn't a purchase/billing/travel record
    - "Newsletter": subscribed content, digests, marketing
-   - "Transactional": purchase receipts, order/shipping confirmations, invoices, travel booking confirmations
+   - "Transactional": purchase receipts, order/shipping confirmations, invoices, and ANY travel-related automated message — booking confirmations, check-in reminders, boarding passes, itinerary/gate changes. If it relates to a trip you booked, it's Transactional, never Notification, even if it's phrased as a reminder/alert.
    - "Normal / Uncategorized": only for messages that genuinely don't fit any category above`;
 
 const BASE_SYSTEM_PROMPT_TAIL = `3. reason: one short sentence explaining why — describe the situation, never quote or excerpt the email's actual content.
