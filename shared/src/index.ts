@@ -7,6 +7,13 @@ export interface Placeholder {
 // process it starting Phase 5. Keeping the shape here so both sides agree.
 export const BACKLOG_QUEUE_NAME = "backlog-classification";
 
+// Gap 1 (US-2's "within 2 minutes of arrival"): a separate queue whose only
+// job is deciding *who* to check, on a recurring schedule — the actual
+// classification work still runs entirely through BACKLOG_QUEUE_NAME's
+// existing, already-tested pipeline. Kept separate so the scheduler's own
+// tick job can never be confused with a per-user classification job.
+export const POLL_QUEUE_NAME = "poll-scheduler";
+
 export type BacklogDateRange = "7d" | "30d" | "forward";
 
 export interface BacklogJobData {

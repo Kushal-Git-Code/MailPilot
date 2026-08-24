@@ -3,7 +3,7 @@ import { Redis as IORedis } from "ioredis";
 import { google } from "googleapis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { BACKLOG_QUEUE_NAME, applyPriorityLabel, decrypt, type BacklogJobData, type DefaultCategory } from "shared";
-import { fetchGmailMessagesForRange } from "../gmail/fetch.js";
+import { listGmailMessageRefs, fetchFullMessages } from "../gmail/fetch.js";
 import { classifyEmail } from "../classification/classify.js";
 import { persistClassification } from "../classification/persist.js";
 import { applyCorrectionOverride, applyCategoryOverride } from "../classification/applyCorrectionOverride.js";
@@ -24,6 +24,29 @@ async function alreadyProcessedIds(supabase: SupabaseClient, userId: string, ids
     .in("gmail_message_id", ids);
   if (error) throw error;
   return new Set((data ?? []).map((row) => row.gmail_message_id));
+}
+
+// Gap 1's "forward" cursor: Gmail's after: search is date-only, so this is
+// a coarse starting point, not a precise one — exact new-vs-seen precision
+// still comes from alreadyProcessedIds. A brand-new "forward-only" signup
+// (no session yet) falls back to their Gmail connection date, matching
+// what "from today forward" means at onboarding.
+async function resolveForwardSinceDate(supabase: SupabaseClient, userId: string): Promise<Date> {
+  const { data: lastSession } = await supabase
+    .from("triage_sessions")
+    .select("completed_at")
+    .eq("user_id", userId)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastSession) return new Date(lastSession.completed_at);
+
+  const { data: tokenRow } = await supabase
+    .from("gmail_tokens")
+    .select("connected_at")
+    .eq("user_id", userId)
+    .single();
+  return tokenRow ? new Date(tokenRow.connected_at) : new Date();
 }
 
 // US-3: a user's manual correction is remembered per-sender (CLAUDE.md's
@@ -100,19 +123,27 @@ export function startBacklogWorker() {
       );
       oauth2Client.setCredentials({ refresh_token: decrypt(tokenRow.refresh_token) });
 
-      const allMessages = await fetchGmailMessagesForRange(oauth2Client, dateRange);
-      console.log(`[backlog-worker] Fetched ${allMessages.length} message(s) for user ${userId}`);
+      const forwardSinceDate = dateRange === "forward" ? await resolveForwardSinceDate(supabase, userId) : undefined;
+      const refs = await listGmailMessageRefs(oauth2Client, dateRange, forwardSinceDate);
+      console.log(`[backlog-worker] Found ${refs.length} message ref(s) for user ${userId}`);
 
       // Skip messages already written to `emails` (Step 21's unique
       // constraint makes this safe) — this is also what makes "resume
       // tomorrow" work without any separate cursor/pagination state.
+      // Filtering here, before fetching full body content, is what keeps
+      // Gap 1's repeated polling cheap — most polls find nothing new.
       const doneIds = await alreadyProcessedIds(
         supabase,
         userId,
-        allMessages.map((m) => m.gmailMessageId)
+        refs.map((r) => r.id)
       );
-      const pending = allMessages.filter((m) => !doneIds.has(m.gmailMessageId));
-      console.log(`[backlog-worker] ${pending.length} message(s) not yet processed`);
+      const pendingRefs = refs.filter((r) => !doneIds.has(r.id));
+      console.log(`[backlog-worker] ${pendingRefs.length} message(s) not yet processed`);
+
+      const pending = await fetchFullMessages(
+        oauth2Client,
+        pendingRefs.map((r) => r.id)
+      );
 
       const senderRules = await loadSenderCorrectionRules(supabase, userId);
       const senderCategoryRules = await loadSenderCategoryRules(supabase, userId);
@@ -174,7 +205,29 @@ export function startBacklogWorker() {
 
       if (leftover > 0) {
         const delay = msUntilNextReset(resetAt);
-        await getBacklogQueue().add("scan", { userId, dateRange }, { delay });
+        await getBacklogQueue().add(
+          "scan",
+          { userId, dateRange },
+          {
+            delay,
+            // Forward jobs get a stable jobId (Gap 1) so the poll scheduler
+            // can recognize this delayed continuation as "already in
+            // flight" and skip re-enqueueing a duplicate for this user.
+            // removeOnComplete/Fail must be `true`, not a count — BullMQ
+            // returns the existing job (no-op) whenever a job with this id
+            // still exists in Redis, so anything short of immediate removal
+            // leaves the id permanently blocked after the first run
+            // (confirmed live: a count-based policy left attemptsMade
+            // stuck at 1 across repeated poll ticks).
+            ...(dateRange === "forward"
+              ? {
+                  jobId: `forward-${userId}`,
+                  removeOnComplete: true,
+                  removeOnFail: true,
+                }
+              : {}),
+          }
+        );
         console.log(
           `[backlog-worker] Daily cap reached — ${leftover} message(s) queued to resume in ${Math.round(delay / 60000)} min.`
         );

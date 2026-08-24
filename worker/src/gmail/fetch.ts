@@ -11,18 +11,33 @@ export interface FetchedMessage {
   body: string;
 }
 
+export interface GmailMessageRef {
+  id: string;
+  threadId: string;
+}
+
 const CONCURRENCY = 10;
 const MAX_RETRIES = 3;
 const MAX_BODY_CHARS = 3000;
 
-function dateRangeToQuery(dateRange: BacklogDateRange): string | null {
-  if (dateRange === "forward") return null; // no historical scan needed
-  const days = dateRange === "7d" ? 7 : 30;
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const y = since.getFullYear();
-  const m = String(since.getMonth() + 1).padStart(2, "0");
-  const d = String(since.getDate()).padStart(2, "0");
+function dateToAfterQuery(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   return `after:${y}/${m}/${d}`;
+}
+
+// "forward" has no fixed lookback — it needs an explicit cursor (Gap 1:
+// the caller's last completed session, or their Gmail connection date for
+// a brand-new "forward-only" signup). Gmail's after: operator is date-only,
+// not minute-precise, so this is a coarse pre-filter — exact new-vs-seen
+// precision comes from the caller's already-processed check, not from here.
+function dateRangeToQuery(dateRange: BacklogDateRange, forwardSinceDate?: Date): string | null {
+  if (dateRange === "forward") {
+    return forwardSinceDate ? dateToAfterQuery(forwardSinceDate) : null;
+  }
+  const days = dateRange === "7d" ? 7 : 30;
+  return dateToAfterQuery(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
 }
 
 // Gmail's rate limits are a hard constraint (per CLAUDE.md) — real backoff,
@@ -83,28 +98,48 @@ function extractBody(payload: gmail_v1.Schema$MessagePart | undefined): string {
   return "";
 }
 
-export async function fetchGmailMessagesForRange(
+// Listing only — cheap Gmail quota-wise, no body content. Split out from
+// the full-content fetch (below) specifically so a caller can filter out
+// already-processed messages *before* paying the cost of downloading full
+// bodies for them again. This matters most for Gap 1's polling, which
+// re-checks a mostly-already-seen window every 2 minutes; it was a
+// no-op for the original one-shot backlog scan, which is why this split
+// wasn't needed before now.
+export async function listGmailMessageRefs(
   oauth2Client: InstanceType<typeof google.auth.OAuth2>,
-  dateRange: BacklogDateRange
-): Promise<FetchedMessage[]> {
-  const query = dateRangeToQuery(dateRange);
+  dateRange: BacklogDateRange,
+  forwardSinceDate?: Date
+): Promise<GmailMessageRef[]> {
+  const query = dateRangeToQuery(dateRange, forwardSinceDate);
   if (query === null) return [];
 
   const gmail = google.gmail({ version: "v1", auth: oauth2Client });
 
-  const ids: string[] = [];
+  const refs: GmailMessageRef[] = [];
   let pageToken: string | undefined;
   do {
     const { data } = await withBackoff(() =>
       gmail.users.messages.list({ userId: "me", q: query, pageToken, maxResults: 500 })
     );
     for (const m of data.messages ?? []) {
-      if (m.id) ids.push(m.id);
+      if (m.id && m.threadId) refs.push({ id: m.id, threadId: m.threadId });
     }
     pageToken = data.nextPageToken ?? undefined;
   } while (pageToken);
 
-  // Batched/concurrent fetch (bounded), not one-request-per-email sequentially.
+  return refs;
+}
+
+// Full content (MIME-parsed body) for a specific, already-narrowed set of
+// message ids — batched/concurrent (bounded), not one-request-per-email.
+export async function fetchFullMessages(
+  oauth2Client: InstanceType<typeof google.auth.OAuth2>,
+  ids: string[]
+): Promise<FetchedMessage[]> {
+  if (ids.length === 0) return [];
+
+  const gmail = google.gmail({ version: "v1", auth: oauth2Client });
+
   const results: FetchedMessage[] = [];
   for (let i = 0; i < ids.length; i += CONCURRENCY) {
     const batch = ids.slice(i, i + CONCURRENCY);

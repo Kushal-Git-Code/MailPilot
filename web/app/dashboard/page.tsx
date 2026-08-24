@@ -6,6 +6,7 @@ import { getLatestSession } from "@/lib/triageSession";
 import { LogoutButton } from "./logout-button";
 import { PriorityList, type PriorityListItem } from "./priority-list";
 import { SessionSummary } from "./session-summary";
+import { CheckNowButton } from "./check-now-button";
 
 // This page's data (classifications, corrections, undo availability) can
 // change from one visit to the next — never let Next.js cache a stale
@@ -98,6 +99,7 @@ export default async function DashboardPage() {
             </a>
           </div>
           <div className="flex items-center gap-2">
+            <CheckNowButton />
             <form action="/api/gmail/disconnect" method="POST">
               <button
                 type="submit"
