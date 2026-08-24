@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { DAILY_CAP } from "shared";
 
-export const DAILY_CAP = 75;
 const RESET_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 // Rolling 24h window (not calendar-day-aligned) — simpler, and matches how

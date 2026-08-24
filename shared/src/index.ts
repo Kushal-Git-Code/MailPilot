@@ -36,6 +36,12 @@ export const DEFAULT_CATEGORIES = [
 
 export type DefaultCategory = (typeof DEFAULT_CATEGORIES)[number];
 
+// Free-tier daily classification cap (docs/backend-schema.md's
+// daily_email_count). Lives here, not just in /worker, so /web's Settings —
+// Plan page (Step 33) can display the same number the worker actually
+// enforces — never a second hardcoded copy that could drift out of sync.
+export const DAILY_CAP = 75;
+
 // Gmail token encryption — shared between /web (encrypts on OAuth callback,
 // decrypts to revoke) and /worker (decrypts to call the Gmail API). Kept
 // here, not duplicated, so both sides can never drift out of sync.
