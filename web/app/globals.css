@@ -40,3 +40,29 @@ body {
   .blob-1 { animation: float 12s ease-in-out infinite; }
   .blob-2 { animation: float-alt 15s ease-in-out infinite; }
 }
+
+/* Sidebar wordmark ("Option B", design review) — a slow, continuous drift
+   through the full brand palette rather than a static gradient, since this
+   is the one brand moment visible on every authenticated page. Defined
+   here (not per-component) so the desktop sidebar and mobile header share
+   one definition and can't drift out of sync. */
+@keyframes brand-flow {
+  to { background-position: 300% 0; }
+}
+.brand-wordmark {
+  background: linear-gradient(90deg, #ff6b6b, #d9a056, #7c6bff, #4d96ff, #d9578a, #ff6b6b);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes brand-badge-wobble {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .brand-wordmark { animation: brand-flow 6s linear infinite; }
+  .brand-badge-wobble { animation: brand-badge-wobble 7s ease-in-out infinite; }
+}

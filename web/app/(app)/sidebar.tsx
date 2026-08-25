@@ -12,6 +12,24 @@ interface NavLinkItem {
   matchPrefix: string;
 }
 
+// Shared between the desktop sidebar and the mobile header so the two
+// never drift — the flowing gradient (.brand-wordmark) and badge wobble
+// (.brand-badge-wobble) are defined once in globals.css, matching the
+// existing convention there (.blob-1, etc.) rather than duplicating
+// keyframes per usage. Both respect prefers-reduced-motion (same file).
+function BrandMark() {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="brand-badge-wobble flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-gold shadow-glow">
+        <svg viewBox="0 0 24 24" fill="none" className="h-3 w-3" aria-hidden="true">
+          <path d="M2 12L22 2L14 22L11 13L2 12Z" fill="#fff" />
+        </svg>
+      </div>
+      <span className="brand-wordmark font-display text-lg font-bold">MailPilot</span>
+    </div>
+  );
+}
+
 // Only Inbox and Settings are real, routable sections in v1 — everything
 // else is visible-but-muted "Coming soon", per docs/app-flow.md's nav spec.
 // Not links: clicking a "Coming soon" item should do nothing, not 404.
@@ -33,7 +51,7 @@ function SidebarContents({ displayName, email, onNavigate }: SidebarContentsProp
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 pb-4 pt-6">
-        <span className="font-display text-lg font-bold text-foreground">MailPilot</span>
+        <BrandMark />
       </div>
 
       {displayName && (
@@ -105,7 +123,7 @@ export function Sidebar({ displayName, email }: { displayName: string; email: st
 
       {/* Mobile: hamburger toggle + slide-in drawer */}
       <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
-        <span className="font-display text-lg font-bold text-foreground">MailPilot</span>
+        <BrandMark />
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
