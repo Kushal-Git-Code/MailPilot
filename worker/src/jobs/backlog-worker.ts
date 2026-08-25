@@ -257,13 +257,34 @@ export function startBacklogWorker() {
         );
       }
 
+      // Marks the *latest* processing row for this user rather than
+      // threading a specific backlog_jobs id through BullMQ's job data —
+      // in practice a user has at most one scan in flight at a time, and
+      // this keeps the API route's insert and the worker's update
+      // decoupled (shared package doesn't need a new field for this).
+      await supabase
+        .from("backlog_jobs")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("status", "processing");
+
       return { processedCount, priorityCount, leftover };
     },
     { connection }
   );
 
-  worker.on("failed", (job, err) => {
+  worker.on("failed", async (job, err) => {
     console.error(`[backlog-worker] Job ${job?.id} failed:`, err.message);
+    const userId = job?.data?.userId;
+    if (!userId) return;
+    const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    await supabase
+      .from("backlog_jobs")
+      .update({ status: "failed", completed_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("status", "processing");
   });
 
   return worker;

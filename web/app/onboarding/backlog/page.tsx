@@ -30,22 +30,13 @@ export default async function BacklogPage() {
           </svg>
         </div>
 
-        <h1 className="font-display text-xl font-extrabold text-foreground">Choose your backlog range</h1>
-        <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-          {token ? (
-            <>
-              MailPilot will scan <span className="font-semibold text-foreground">{token.gmail_address}</span>&apos;s
-              past emails to build your first triage. Pick how far back to go.
-            </>
-          ) : (
-            "Connect Gmail first to pick a backlog range."
-          )}
-        </p>
-
-        {token && (
-          <div className="mt-7">
-            <BacklogForm />
-          </div>
+        {token ? (
+          <BacklogForm gmailAddress={token.gmail_address} />
+        ) : (
+          <>
+            <h1 className="font-display text-xl font-extrabold text-foreground">Choose your backlog range</h1>
+            <p className="mt-3 text-sm leading-relaxed text-text-secondary">Connect Gmail first to pick a backlog range.</p>
+          </>
         )}
       </div>
     </main>

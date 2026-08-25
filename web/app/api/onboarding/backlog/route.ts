@@ -31,5 +31,11 @@ export async function POST(request: Request) {
 
   const job = await getBacklogQueue().add("scan", { userId: user.id, dateRange });
 
+  // Row created here, at enqueue time, not when the worker actually picks
+  // the job up — so the dashboard's "scanning your inbox" banner appears
+  // the moment the user acts, not after a possible queue delay. The
+  // worker updates this same row to 'completed'/'failed' when it finishes.
+  await supabase.from("backlog_jobs").insert({ user_id: user.id, status: "processing", date_range: dateRange });
+
   return NextResponse.json({ jobId: job.id });
 }

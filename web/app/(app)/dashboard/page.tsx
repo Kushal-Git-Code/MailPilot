@@ -3,10 +3,12 @@ import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
 import { getUndoableEmailIds } from "@/lib/undoability";
 import { getLatestSession } from "@/lib/triageSession";
+import { hasActiveBacklogJob } from "@/lib/backlogJob";
 import { LogoutButton } from "./logout-button";
 import { PriorityList, type PriorityListItem } from "./priority-list";
 import { SessionSummary } from "./session-summary";
 import { CheckNowButton } from "./check-now-button";
+import { ScanProgressBanner } from "./scan-progress-banner";
 
 // This page's data (classifications, corrections, undo availability) can
 // change from one visit to the next — never let Next.js cache a stale
@@ -69,6 +71,7 @@ export default async function DashboardPage() {
       : new Set<string>();
 
   const latestSession = await getLatestSession(supabase, user.id);
+  const scanning = await hasActiveBacklogJob(supabase, user.id);
 
   const items: PriorityListItem[] = emails.map((e) => {
     const info = displayMap.get(e.gmail_message_id);
@@ -113,13 +116,19 @@ export default async function DashboardPage() {
           </div>
         </header>
 
+        <ScanProgressBanner initiallyActive={scanning} />
+
         <SessionSummary session={latestSession} />
 
         {items.length === 0 ? (
           <div className="rounded-2xl bg-surface p-10 text-center shadow-glow">
-            <h2 className="font-display text-xl font-bold text-foreground">You&apos;re all caught up</h2>
+            <h2 className="font-display text-xl font-bold text-foreground">
+              {scanning ? "Scanning your inbox…" : "You're all caught up"}
+            </h2>
             <p className="mt-2 text-sm text-text-secondary">
-              MailPilot is watching your inbox — you&apos;ll see anything that needs you here.
+              {scanning
+                ? "MailPilot is going through your backlog now — anything that needs you will show up here as it's found."
+                : "MailPilot is watching your inbox — you'll see anything that needs you here."}
             </p>
           </div>
         ) : (
