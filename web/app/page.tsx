@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { AuthRedirectHandler } from "./auth-redirect-handler";
 
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 text-center">
+      <AuthRedirectHandler />
       <h1 className="text-xl font-semibold text-foreground">MailPilot</h1>
       <p className="max-w-md text-sm text-text-secondary">
         MailPilot triages your Gmail inbox automatically, so you only open what

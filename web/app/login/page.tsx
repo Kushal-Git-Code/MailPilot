@@ -24,17 +24,29 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(
-    searchParams.get("error") === "auth_callback_failed"
-      ? "Something went wrong signing in. Please try again."
-      : null
-  );
+  const [error, setError] = useState<string | null>(() => {
+    const errorParam = searchParams.get("error");
+    const errorCode = searchParams.get("error_code");
+    if (!errorParam) return null;
+    if (errorCode === "otp_expired") {
+      return "That confirmation link expired or was already used. Sign up again to get a fresh one.";
+    }
+    if (errorParam === "auth_callback_failed") {
+      return "Something went wrong signing in. Please try again.";
+    }
+    return "That link is no longer valid. Please try again.";
+  });
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   // Mirrors the original's Take off -> Boarding... -> Welcome aboard label
   // sequence, but only "Welcome aboard" is shown after a genuine success,
   // never faked ahead of the actual auth result.
   const [launchPhase, setLaunchPhase] = useState<"idle" | "boarding" | "aboard">("idle");
+  // Distinct from launchPhase: once a signup succeeds, the button must stay
+  // visibly "done" (locked, muted) rather than reverting to a bright,
+  // clickable "Create account" that looks like nothing happened — the real
+  // next step is checking email, not resubmitting this form.
+  const [signupComplete, setSignupComplete] = useState(false);
   const [confetti, setConfetti] = useState<{ id: number; color: string; angle: number; dist: number; delay: number }[]>([]);
   const launchBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -120,7 +132,7 @@ function LoginForm() {
       } else {
         burstConfetti();
         setLaunchPhase("aboard");
-        setTimeout(() => setLaunchPhase("idle"), 1700);
+        setTimeout(() => setSignupComplete(true), 1700);
         setInfo("Check your email to confirm your account before logging in.");
       }
     }
@@ -135,8 +147,9 @@ function LoginForm() {
     });
   }
 
-  const launchLabel =
-    launchPhase === "boarding"
+  const launchLabel = signupComplete
+    ? "Check your email to continue"
+    : launchPhase === "boarding"
       ? "Boarding..."
       : launchPhase === "aboard"
         ? "Welcome aboard ✓"
@@ -393,14 +406,20 @@ function LoginForm() {
             <button
               ref={launchBtnRef}
               type="submit"
-              className={`launch-btn reveal ${launchPhase !== "idle" ? "is-launching" : ""}`}
+              className={`launch-btn reveal ${launchPhase !== "idle" ? "is-launching" : ""} ${signupComplete ? "is-locked" : ""}`}
               style={{ animationDelay: "0.56s" }}
-              disabled={loading}
+              disabled={loading || signupComplete}
             >
               <span className="btn-label">{launchLabel}</span>
-              <svg className="btn-plane" viewBox="0 0 24 24" fill="#fff">
-                <path d="M2 12L22 2L14 22L11 13L2 12Z" />
-              </svg>
+              {signupComplete ? (
+                <svg className="btn-plane" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              ) : (
+                <svg className="btn-plane" viewBox="0 0 24 24" fill="#fff">
+                  <path d="M2 12L22 2L14 22L11 13L2 12Z" />
+                </svg>
+              )}
               {confetti.map((dot) => (
                 <span
                   key={dot.id}
@@ -442,6 +461,7 @@ function LoginForm() {
                 setMode(mode === "signIn" ? "signUp" : "signIn");
                 setError(null);
                 setInfo(null);
+                setSignupComplete(false);
               }}
             >
               {mode === "signIn" ? "Create an account" : "Log in"}
@@ -779,9 +799,9 @@ function LoginForm() {
           text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: rgba(27, 42, 74, 0.45);
         }
 
-        .message { font-size: 12.5px; margin: -8px 0 14px; }
+        .message { font-size: 12.5px; margin: -8px 0 14px; font-weight: 600; }
         .message.error { color: #e5484d; }
-        .message.info { color: #63709a; }
+        .message.info { color: #1b2a4a; }
 
         .launch-btn {
           position: relative; width: 100%; border: none; border-radius: 16px; padding: 16px 20px;
@@ -794,6 +814,12 @@ function LoginForm() {
           transition: background-position 0.6s ease, transform 0.15s ease, box-shadow 0.25s ease;
         }
         .launch-btn:disabled { cursor: default; }
+        .launch-btn.is-locked {
+          background: linear-gradient(90deg, #8791ab, #63709a);
+          box-shadow: none;
+        }
+        .launch-btn.is-locked::after { display: none; }
+        .launch-btn.is-locked .btn-plane { animation: none; }
         .launch-btn::after {
           content: ""; position: absolute; top: 0; left: -40%; width: 35%; height: 100%;
           background: linear-gradient(75deg, transparent, rgba(255, 255, 255, 0.55), transparent);
