@@ -5,7 +5,16 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  // avatarColorFor() (lib/avatarColor.ts) builds one of these 5 class names
+  // at runtime from an array — Tailwind's scanner can't see that dynamic
+  // pick coming, only literal strings, so without this any color that
+  // doesn't *also* happen to appear literally elsewhere in the app never
+  // gets its CSS generated at all (silently invisible, not an error).
+  // Real bug hit in testing: bg-coral and bg-rose had no other literal
+  // usage anywhere, so ~40% of avatars rendered with no background color.
+  safelist: ["bg-coral", "bg-gold", "bg-tertiary", "bg-sky", "bg-rose"],
   theme: {
     extend: {
       fontFamily: {
