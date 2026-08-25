@@ -37,7 +37,7 @@ export default async function SettingsCategoriesPage() {
 
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6">
-          <h1 className="text-xl font-semibold text-foreground">Categories</h1>
+          <h1 className="font-display text-xl font-bold text-foreground">Categories</h1>
           <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
             &larr; Back to inbox
           </Link>

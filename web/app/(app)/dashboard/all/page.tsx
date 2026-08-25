@@ -42,7 +42,7 @@ export default async function AllEmailsPage() {
         <div className="blob blob-1 -left-20 -top-20 h-72 w-72 bg-accent" />
         <div className="blob blob-2 -bottom-24 -right-10 h-80 w-80 bg-secondary" />
         <div className="relative z-10 w-full max-w-md rounded-2xl bg-surface p-8 text-center shadow-glow">
-          <h1 className="text-xl font-semibold text-foreground">Gmail not connected</h1>
+          <h1 className="font-display text-xl font-bold text-foreground">Gmail not connected</h1>
           <p className="mt-3 text-sm text-text-secondary">
             Connect your Gmail account to start seeing your triaged inbox here.
           </p>
@@ -114,7 +114,7 @@ export default async function AllEmailsPage() {
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">All Mail</h1>
+            <h1 className="font-display text-xl font-bold text-foreground">All Mail</h1>
             <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
               &larr; Back to Needs You
             </Link>
@@ -137,7 +137,7 @@ export default async function AllEmailsPage() {
 
         {items.length === 0 ? (
           <div className="rounded-2xl bg-surface p-10 text-center shadow-glow">
-            <h2 className="text-xl font-semibold text-foreground">Nothing classified yet</h2>
+            <h2 className="font-display text-xl font-bold text-foreground">Nothing classified yet</h2>
             <p className="mt-2 text-sm text-text-secondary">
               Once MailPilot processes your inbox, everything will show up here.
             </p>
