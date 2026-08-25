@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
@@ -29,12 +30,12 @@ export default async function AllEmailsPage() {
           <p className="mt-3 text-sm text-text-secondary">
             Connect your Gmail account to start seeing your triaged inbox here.
           </p>
-          <a
+          <Link
             href="/onboarding/connect"
             className="mt-6 inline-block rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3 text-sm font-semibold text-white shadow-glow"
           >
             Connect Gmail
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -110,9 +111,9 @@ export default async function AllEmailsPage() {
         <header className="mb-6 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-foreground">All Mail</h1>
-            <a href="/dashboard" className="text-xs font-medium text-accent hover:underline">
+            <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
               &larr; Back to Needs You
-            </a>
+            </Link>
             {emails.length === MAX_EMAILS && (
               <p className="mt-1 text-xs text-text-secondary">Showing your most recent {MAX_EMAILS}</p>
             )}

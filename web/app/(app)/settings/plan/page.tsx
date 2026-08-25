@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DAILY_CAP } from "shared";
 import { SettingsTabs } from "../settings-tabs";
@@ -49,9 +50,9 @@ export default async function SettingsPlanPage() {
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6">
           <h1 className="text-xl font-semibold text-foreground">Plan &amp; usage</h1>
-          <a href="/dashboard" className="text-xs font-medium text-accent hover:underline">
+          <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
             &larr; Back to inbox
-          </a>
+          </Link>
         </header>
 
         <SettingsTabs active="plan" />

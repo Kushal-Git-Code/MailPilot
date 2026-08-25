@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
@@ -34,12 +35,12 @@ export default async function DashboardPage() {
           <p className="mt-3 text-sm text-text-secondary">
             Connect your Gmail account to start seeing your triaged inbox here.
           </p>
-          <a
+          <Link
             href="/onboarding/connect"
             className="mt-6 inline-block rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3 text-sm font-semibold text-white shadow-glow"
           >
             Connect Gmail
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -98,9 +99,9 @@ export default async function DashboardPage() {
             <h1 className="font-display text-xl font-bold text-foreground">
               {items.length > 0 ? `Needs You (${items.length})` : "MailPilot"}
             </h1>
-            <a href="/dashboard/all" className="text-xs font-medium text-accent hover:underline">
+            <Link href="/dashboard/all" className="text-xs font-medium text-accent hover:underline">
               Browse all mail &rarr;
-            </a>
+            </Link>
           </div>
           <div className="flex items-center gap-2">
             <CheckNowButton />

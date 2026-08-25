@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsTabs } from "../settings-tabs";
 import { CategoryManager, type CustomCategoryItem } from "./category-manager";
@@ -37,9 +38,9 @@ export default async function SettingsCategoriesPage() {
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6">
           <h1 className="text-xl font-semibold text-foreground">Categories</h1>
-          <a href="/dashboard" className="text-xs font-medium text-accent hover:underline">
+          <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
             &larr; Back to inbox
-          </a>
+          </Link>
         </header>
 
         <SettingsTabs active="categories" />

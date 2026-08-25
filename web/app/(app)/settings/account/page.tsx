@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsTabs } from "../settings-tabs";
 
@@ -29,9 +30,9 @@ export default async function SettingsAccountPage() {
       <div className="relative z-10 mx-auto max-w-2xl">
         <header className="mb-6">
           <h1 className="text-xl font-semibold text-foreground">Account</h1>
-          <a href="/dashboard" className="text-xs font-medium text-accent hover:underline">
+          <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
             &larr; Back to inbox
-          </a>
+          </Link>
         </header>
 
         <SettingsTabs active="account" />
@@ -60,12 +61,12 @@ export default async function SettingsAccountPage() {
           ) : (
             <>
               <p className="mt-1 text-sm text-text-secondary">No Gmail account connected.</p>
-              <a
+              <Link
                 href="/onboarding/connect"
                 className="mt-4 inline-block rounded-xl bg-gradient-to-r from-accent to-accent-hover px-5 py-2.5 text-sm font-semibold text-white shadow-glow"
               >
                 Connect Gmail
-              </a>
+              </Link>
             </>
           )}
         </section>

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 // Lightweight cross-links between Settings sub-pages — not a client component,
 // no interactivity needed beyond plain links, so this stays server-rendered.
 const TABS = [
@@ -10,7 +12,7 @@ export function SettingsTabs({ active }: { active: (typeof TABS)[number]["key"] 
   return (
     <div className="mb-4 flex gap-1 border-b border-border">
       {TABS.map((tab) => (
-        <a
+        <Link
           key={tab.key}
           href={tab.href}
           className={`px-3 py-2 text-sm font-medium transition-colors ${
@@ -20,7 +22,7 @@ export function SettingsTabs({ active }: { active: (typeof TABS)[number]["key"] 
           }`}
         >
           {tab.label}
-        </a>
+        </Link>
       ))}
     </div>
   );
