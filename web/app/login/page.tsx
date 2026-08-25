@@ -47,6 +47,12 @@ function LoginForm() {
   // clickable "Create account" that looks like nothing happened — the real
   // next step is checking email, not resubmitting this form.
   const [signupComplete, setSignupComplete] = useState(false);
+  // Next.js doesn't swap the page until /dashboard's server render finishes
+  // (it does live, uncached Gmail API calls per CLAUDE.md's zero-storage
+  // rule, so that's never instant) — without this, the button just sits
+  // frozen on "Welcome aboard" for however long that takes, reading as
+  // stuck rather than working.
+  const [navigating, setNavigating] = useState(false);
   const [confetti, setConfetti] = useState<{ id: number; color: string; angle: number; dist: number; delay: number }[]>([]);
   const launchBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -119,7 +125,8 @@ function LoginForm() {
         setLoading(false);
       } else {
         burstConfetti();
-        setTimeout(() => setLaunchPhase("aboard"), 600);
+        setLaunchPhase("aboard");
+        setTimeout(() => setNavigating(true), 900);
         router.push("/dashboard");
         router.refresh();
       }
@@ -147,15 +154,17 @@ function LoginForm() {
     });
   }
 
-  const launchLabel = signupComplete
-    ? "Check your email to continue"
-    : launchPhase === "boarding"
-      ? "Boarding..."
-      : launchPhase === "aboard"
-        ? "Welcome aboard ✓"
-        : mode === "signIn"
-          ? "Take off"
-          : "Create account";
+  const launchLabel = navigating
+    ? "Taking you to your inbox..."
+    : signupComplete
+      ? "Check your email to continue"
+      : launchPhase === "boarding"
+        ? "Boarding..."
+        : launchPhase === "aboard"
+          ? "Welcome aboard ✓"
+          : mode === "signIn"
+            ? "Take off"
+            : "Create account";
 
   return (
     <main ref={stageRef} className="login-stage">
@@ -408,10 +417,15 @@ function LoginForm() {
               type="submit"
               className={`launch-btn reveal ${launchPhase !== "idle" ? "is-launching" : ""} ${signupComplete ? "is-locked" : ""}`}
               style={{ animationDelay: "0.56s" }}
-              disabled={loading || signupComplete}
+              disabled={loading || signupComplete || navigating}
             >
               <span className="btn-label">{launchLabel}</span>
-              {signupComplete ? (
+              {navigating ? (
+                <svg className="btn-plane btn-spinner" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              ) : signupComplete ? (
                 <svg className="btn-plane" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
@@ -820,6 +834,10 @@ function LoginForm() {
         }
         .launch-btn.is-locked::after { display: none; }
         .launch-btn.is-locked .btn-plane { animation: none; }
+        .btn-spinner { animation: spin 0.8s linear infinite; }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         .launch-btn::after {
           content: ""; position: absolute; top: 0; left: -40%; width: 35%; height: 100%;
           background: linear-gradient(75deg, transparent, rgba(255, 255, 255, 0.55), transparent);

@@ -44,6 +44,11 @@ export function BacklogForm({ gmailAddress }: { gmailAddress: string }) {
   const [selected, setSelected] = useState<(typeof OPTIONS)[number]["value"] | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Same reasoning as the login page: /dashboard's server render does live
+  // Gmail lookups, so router.push isn't instant — without this the "You're
+  // all set" checkmark just sits static for however long that takes,
+  // reading as stuck rather than working.
+  const [navigating, setNavigating] = useState(false);
 
   async function handleGetStarted() {
     if (!selected) return;
@@ -60,6 +65,7 @@ export function BacklogForm({ gmailAddress }: { gmailAddress: string }) {
         throw new Error(body.error ?? "Something went wrong.");
       }
       setStatus("done");
+      setTimeout(() => setNavigating(true), 700);
       setTimeout(() => router.push("/dashboard"), REDIRECT_DELAY_MS);
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Something went wrong.");
@@ -71,13 +77,20 @@ export function BacklogForm({ gmailAddress }: { gmailAddress: string }) {
     return (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-success/15 text-success">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
+          {navigating ? (
+            <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 animate-spin">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+              <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+          )}
         </div>
         <h1 className="font-display text-xl font-extrabold text-foreground">You&apos;re all set</h1>
         <p className="mt-3 text-sm leading-relaxed text-text-secondary">
-          Taking you to your inbox — new results will keep appearing there as MailPilot finishes scanning.
+          {navigating ? "Taking you to your inbox…" : "Taking you to your inbox — new results will keep appearing there as MailPilot finishes scanning."}
         </p>
       </motion.div>
     );
