@@ -18,7 +18,23 @@ export default async function AllEmailsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null; // middleware already guards this route
 
-  const gmail = await getGmailClientForUser(user.id);
+  // Capped so live-fetch cost stays bounded regardless of how much history
+  // has accumulated — most recent first, since that's what's relevant day
+  // to day. Full pagination isn't built yet; this keeps the page fast in
+  // the meantime rather than degrading as the account ages.
+  const MAX_EMAILS = 150;
+
+  // Gmail-client init and the emails query are independent — see the same
+  // reasoning in dashboard/page.tsx.
+  const [gmail, { data: allEmails }] = await Promise.all([
+    getGmailClientForUser(user.id),
+    supabase
+      .from("emails")
+      .select("id, gmail_message_id, gmail_thread_id, classification_reason, category, priority_flagged, received_at")
+      .eq("user_id", user.id)
+      .order("received_at", { ascending: false })
+      .limit(MAX_EMAILS),
+  ]);
 
   if (!gmail) {
     return (
@@ -41,47 +57,35 @@ export default async function AllEmailsPage() {
     );
   }
 
-  // Capped so live-fetch cost stays bounded regardless of how much history
-  // has accumulated — most recent first, since that's what's relevant day
-  // to day. Full pagination isn't built yet; this keeps the page fast in
-  // the meantime rather than degrading as the account ages.
-  const MAX_EMAILS = 150;
-
-  const { data: allEmails } = await supabase
-    .from("emails")
-    .select("id, gmail_message_id, gmail_thread_id, classification_reason, category, priority_flagged, received_at")
-    .eq("user_id", user.id)
-    .order("received_at", { ascending: false })
-    .limit(MAX_EMAILS);
-
   const emails = allEmails ?? [];
-  const displayMap =
+
+  // Display info, undoable-ids, and the custom-categories query are all
+  // independent of each other — same reasoning as dashboard/page.tsx.
+  const [displayMap, undoableIds, { data: categoryRules }] = await Promise.all([
     emails.length > 0
-      ? await getEmailDisplayInfo(
+      ? getEmailDisplayInfo(
           gmail,
           emails.map((e) => e.gmail_message_id)
         )
-      : new Map();
-
-  const undoableIds =
+      : Promise.resolve(new Map()),
     emails.length > 0
-      ? await getUndoableEmailIds(
+      ? getUndoableEmailIds(
           supabase,
           user.id,
           emails.map((e) => e.id)
         )
-      : new Set<string>();
-
-  // Step 32's custom categories need to appear as real filter/correction
-  // options here too — the classifier already uses them, this was the
-  // explicitly-flagged fast-follow to make them visible in the UI as well.
-  const { data: categoryRules } = await supabase
-    .from("rules")
-    .select("rule_data")
-    .eq("user_id", user.id)
-    .eq("rule_type", "category_definition")
-    .eq("active", true)
-    .order("created_at", { ascending: true });
+      : Promise.resolve(new Set<string>()),
+    // Step 32's custom categories need to appear as real filter/correction
+    // options here too — the classifier already uses them, this was the
+    // explicitly-flagged fast-follow to make them visible in the UI as well.
+    supabase
+      .from("rules")
+      .select("rule_data")
+      .eq("user_id", user.id)
+      .eq("rule_type", "category_definition")
+      .eq("active", true)
+      .order("created_at", { ascending: true }),
+  ]);
 
   const customCategories = (categoryRules ?? [])
     .map((row) => (row.rule_data as { name?: string }).name)

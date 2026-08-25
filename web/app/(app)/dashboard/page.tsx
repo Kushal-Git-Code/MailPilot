@@ -23,7 +23,20 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) return null; // middleware already guards this route
 
-  const gmail = await getGmailClientForUser(user.id);
+  // Gmail-client init (a real network round trip when the cached access
+  // token has expired) and the emails query don't depend on each other —
+  // running them in parallel instead of sequentially is a straightforward
+  // win, not a micro-optimization: it's one full round trip removed from
+  // every dashboard load.
+  const [gmail, { data: flaggedEmails }] = await Promise.all([
+    getGmailClientForUser(user.id),
+    supabase
+      .from("emails")
+      .select("id, gmail_message_id, gmail_thread_id, classification_reason, received_at, category")
+      .eq("user_id", user.id)
+      .eq("priority_flagged", true)
+      .order("received_at", { ascending: false }),
+  ]);
 
   if (!gmail) {
     return (
@@ -46,33 +59,30 @@ export default async function DashboardPage() {
     );
   }
 
-  const { data: flaggedEmails } = await supabase
-    .from("emails")
-    .select("id, gmail_message_id, gmail_thread_id, classification_reason, received_at, category")
-    .eq("user_id", user.id)
-    .eq("priority_flagged", true)
-    .order("received_at", { ascending: false });
-
   const emails = flaggedEmails ?? [];
-  const displayMap =
+
+  // None of these four depend on each other's results — display info and
+  // undoable-ids both only need `emails` (already in hand), and the
+  // session summary / scan-status checks only need the user id. Running
+  // them as four sequential awaits was four round trips stacked back to
+  // back for no reason; Promise.all collapses that to one.
+  const [displayMap, undoableIds, latestSession, scanning] = await Promise.all([
     emails.length > 0
-      ? await getEmailDisplayInfo(
+      ? getEmailDisplayInfo(
           gmail,
           emails.map((e) => e.gmail_message_id)
         )
-      : new Map();
-
-  const undoableIds =
+      : Promise.resolve(new Map()),
     emails.length > 0
-      ? await getUndoableEmailIds(
+      ? getUndoableEmailIds(
           supabase,
           user.id,
           emails.map((e) => e.id)
         )
-      : new Set<string>();
-
-  const latestSession = await getLatestSession(supabase, user.id);
-  const scanning = await hasActiveBacklogJob(supabase, user.id);
+      : Promise.resolve(new Set<string>()),
+    getLatestSession(supabase, user.id),
+    hasActiveBacklogJob(supabase, user.id),
+  ]);
 
   const items: PriorityListItem[] = emails.map((e) => {
     const info = displayMap.get(e.gmail_message_id);
