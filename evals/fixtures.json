@@ -180,5 +180,26 @@
     "from": "Account Manager <renewals@vendorcorp.com>",
     "body": "Hi, your annual contract is up for renewal on August 29. I need to know by Friday whether you'd like to renew at the current terms or discuss changes, otherwise service will lapse.",
     "expected": { "priority": true, "category": "Human" }
+  },
+  {
+    "id": "tricky-routine-signup-confirmation-1",
+    "subject": "Confirm your email address",
+    "from": "Auth Service <no-reply@authservice.com>",
+    "body": "Thanks for signing up! Please confirm your email address by clicking the link below to complete your account setup. You can request a new confirmation link anytime if this one doesn't work.",
+    "expected": { "priority": false, "category": "Notification" }
+  },
+  {
+    "id": "tricky-signup-confirmation-with-expiry-1",
+    "subject": "Verify your email — link expires in 24 hours",
+    "from": "Auth Service <no-reply@authservice.com>",
+    "body": "Please verify your email address to finish creating your account. This verification link expires in 24 hours, after which you'll need to sign up again from scratch.",
+    "expected": { "priority": true, "category": "Notification" }
+  },
+  {
+    "id": "tricky-routine-otp-no-stated-expiry-1",
+    "subject": "Your login code",
+    "from": "no-reply@someapp.com",
+    "body": "Here is your one-time login code: 118204. Enter this on the sign-in screen to continue.",
+    "expected": { "priority": true, "category": "Notification" }
   }
 ]

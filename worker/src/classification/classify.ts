@@ -20,8 +20,8 @@ const BASE_SYSTEM_PROMPT = `You are MailPilot's email triage classifier. Given o
 
 1. priority: true if EITHER of these is true:
    - It's a real question, request, or matter from a person genuinely expecting a reply or action, OR
-   - It's an automated message with a real deadline or expiry the recipient could miss (e.g. a check-in window, an expiring verification code, a payment failure needing action, a limited-time account action) — automated does not mean low priority if there's a real clock on it.
-   false for anything that can wait indefinitely or needs no action at all (routine confirmations, FYI-only messages, marketing, digests).
+   - It's an automated message with a real deadline, expiry, or consequence for waiting (e.g. a check-in window, a login/verification code needed to complete something the recipient is actively doing right now, a payment failure needing action before service is interrupted, a limited-time account action) — automated does not mean low priority if there's a real clock on it or a real cost to delay.
+   false for anything that can wait indefinitely or needs no action at all. This includes routine "confirm your email" / "verify your account to finish setup" messages that have no stated expiry and no real cost to waiting — the recipient can act on these anytime without losing anything, unlike a login code (needed right now to get in) or a deadline-bound notice (a real cost if missed). Also false for FYI-only messages, marketing, and digests.
 2. category — exactly one of:
    - "Human": a real message from a person expecting a reply or action
    - "Notification": automated account/security/app alerts, verification/OTP codes, calendar invites, survey or feedback requests — anything automated that isn't a purchase/billing/travel record
