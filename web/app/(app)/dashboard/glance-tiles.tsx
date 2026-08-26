@@ -1,21 +1,11 @@
 import Link from "next/link";
 import { GLANCE_CATEGORY_VALUES, CATEGORY_DISPLAY_NAMES, type CategoryValue } from "@/lib/categoryDisplay";
 
-// Same color language as CATEGORY_BADGE_CLASSES (lib/categoryDisplay.ts) --
-// reused rather than reinvented, so a category's color means the same thing
-// here as it does on every badge elsewhere in the app.
-const CATEGORY_ICON_CLASSES: Record<CategoryValue, string> = {
-  Human: "bg-success/15 text-success",
-  Notification: "bg-sky/15 text-sky",
-  Newsletter: "bg-gold/20 text-gold",
-  Transactional: "bg-rose/15 text-rose",
-  "Normal / Uncategorized": "bg-surface-tint text-text-secondary",
-};
-
 // One line per row on what to actually do with it, not just what it is --
-// design-review takeaway from comparing against Tame's category view (each
-// of their rows carries an action caption, e.g. "Only you can handle
-// these" / "Read or archive").
+// design-review takeaway from comparing against Tame's category view. The
+// Needs Your Attention subtitle was originally "Only you can handle these"
+// (too close to a direct lift from Tame's own copy) -- replaced with
+// original wording after a design discussion.
 const CATEGORY_SUBTITLES: Record<CategoryValue, string> = {
   Human: "Real people, nothing urgent",
   Notification: "Security & account alerts",
@@ -23,7 +13,7 @@ const CATEGORY_SUBTITLES: Record<CategoryValue, string> = {
   Transactional: "Receipts, shipping, orders",
   "Normal / Uncategorized": "",
 };
-const NEEDS_YOU_SUBTITLE = "Only you can handle these";
+const NEEDS_ATTENTION_SUBTITLE = "These are waiting on you";
 
 const CATEGORY_ICONS: Record<CategoryValue, JSX.Element> = {
   Human: (
@@ -58,12 +48,82 @@ const CATEGORY_ICONS: Record<CategoryValue, JSX.Element> = {
     </svg>
   ),
 };
-const NEEDS_YOU_ICON = (
+const NEEDS_ATTENTION_ICON = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9.5 2a5.5 5.5 0 0 0-3 10.1V16a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v-3.9A5.5 5.5 0 0 0 9.5 2Z" />
     <path d="M9 22h1" />
   </svg>
 );
+
+// Every row rests as a soft tint of its own color and only shows its full
+// solid color while you're hovering or keyboard-focused on it -- no row is
+// permanently solid by default the way "Needs You" used to always be red.
+// Tailwind needs each variant as a literal string (no dynamic
+// hover:from-${x} interpolation), so this is a lookup of whole class
+// strings per row, not a formula.
+interface RowStyle {
+  link: string;
+  icon: string;
+  title: string;
+  subtitle: string;
+  senders: string;
+  count: string;
+}
+
+const NEEDS_ATTENTION_STYLE: RowStyle = {
+  link: "group relative flex items-center gap-4 rounded-2xl bg-accent/10 p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5 hover:bg-gradient-to-r hover:from-accent hover:to-accent-hover hover:shadow-glow focus-visible:-translate-y-0.5 focus-visible:bg-gradient-to-r focus-visible:from-accent focus-visible:to-accent-hover focus-visible:shadow-glow focus-visible:outline-none",
+  icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent-hover transition-colors group-hover:bg-white/25 group-hover:text-white group-focus-visible:bg-white/25 group-focus-visible:text-white",
+  title: "font-display text-[15px] font-bold leading-tight text-accent-hover transition-colors group-hover:text-white group-focus-visible:text-white",
+  subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground transition-colors group-hover:text-white group-focus-visible:text-white",
+  senders: "mt-1 truncate text-xs text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
+  count: "font-display shrink-0 text-xl font-extrabold leading-none text-accent-hover transition-colors group-hover:text-white group-focus-visible:text-white",
+};
+
+const CATEGORY_STYLES: Record<CategoryValue, RowStyle> = {
+  Human: {
+    link: "group relative flex items-center gap-4 rounded-2xl bg-success/10 p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5 hover:bg-gradient-to-r hover:from-success hover:to-[#22935a] hover:shadow-[0_6px_16px_-6px_rgba(47,174,102,0.5)] focus-visible:-translate-y-0.5 focus-visible:bg-gradient-to-r focus-visible:from-success focus-visible:to-[#22935a] focus-visible:shadow-[0_6px_16px_-6px_rgba(47,174,102,0.5)] focus-visible:outline-none",
+    icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success/20 text-success transition-colors group-hover:bg-white/25 group-hover:text-white group-focus-visible:bg-white/25 group-focus-visible:text-white",
+    title: "font-display text-[15px] font-bold leading-tight text-success transition-colors group-hover:text-white group-focus-visible:text-white",
+    subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground transition-colors group-hover:text-white group-focus-visible:text-white",
+    senders: "mt-1 truncate text-xs text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
+    count: "font-display shrink-0 text-xl font-extrabold leading-none text-success transition-colors group-hover:text-white group-focus-visible:text-white",
+  },
+  Notification: {
+    link: "group relative flex items-center gap-4 rounded-2xl bg-sky/10 p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5 hover:bg-gradient-to-r hover:from-sky hover:to-[#3b7fe0] hover:shadow-[0_6px_16px_-6px_rgba(77,150,255,0.5)] focus-visible:-translate-y-0.5 focus-visible:bg-gradient-to-r focus-visible:from-sky focus-visible:to-[#3b7fe0] focus-visible:shadow-[0_6px_16px_-6px_rgba(77,150,255,0.5)] focus-visible:outline-none",
+    icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky/20 text-sky transition-colors group-hover:bg-white/25 group-hover:text-white group-focus-visible:bg-white/25 group-focus-visible:text-white",
+    title: "font-display text-[15px] font-bold leading-tight text-sky transition-colors group-hover:text-white group-focus-visible:text-white",
+    subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground transition-colors group-hover:text-white group-focus-visible:text-white",
+    senders: "mt-1 truncate text-xs text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
+    count: "font-display shrink-0 text-xl font-extrabold leading-none text-sky transition-colors group-hover:text-white group-focus-visible:text-white",
+  },
+  Newsletter: {
+    link: "group relative flex items-center gap-4 rounded-2xl bg-gold/15 p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5 hover:bg-gradient-to-r hover:from-gold hover:to-[#c08d45] hover:shadow-[0_6px_16px_-6px_rgba(217,160,86,0.5)] focus-visible:-translate-y-0.5 focus-visible:bg-gradient-to-r focus-visible:from-gold focus-visible:to-[#c08d45] focus-visible:shadow-[0_6px_16px_-6px_rgba(217,160,86,0.5)] focus-visible:outline-none",
+    icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/25 text-gold transition-colors group-hover:bg-white/25 group-hover:text-white group-focus-visible:bg-white/25 group-focus-visible:text-white",
+    title: "font-display text-[15px] font-bold leading-tight text-gold transition-colors group-hover:text-white group-focus-visible:text-white",
+    subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground transition-colors group-hover:text-white group-focus-visible:text-white",
+    senders: "mt-1 truncate text-xs text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
+    count: "font-display shrink-0 text-xl font-extrabold leading-none text-gold transition-colors group-hover:text-white group-focus-visible:text-white",
+  },
+  Transactional: {
+    link: "group relative flex items-center gap-4 rounded-2xl bg-rose/10 p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5 hover:bg-gradient-to-r hover:from-rose hover:to-[#c04672] hover:shadow-[0_6px_16px_-6px_rgba(217,87,138,0.5)] focus-visible:-translate-y-0.5 focus-visible:bg-gradient-to-r focus-visible:from-rose focus-visible:to-[#c04672] focus-visible:shadow-[0_6px_16px_-6px_rgba(217,87,138,0.5)] focus-visible:outline-none",
+    icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose/20 text-rose transition-colors group-hover:bg-white/25 group-hover:text-white group-focus-visible:bg-white/25 group-focus-visible:text-white",
+    title: "font-display text-[15px] font-bold leading-tight text-rose transition-colors group-hover:text-white group-focus-visible:text-white",
+    subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground transition-colors group-hover:text-white group-focus-visible:text-white",
+    senders: "mt-1 truncate text-xs text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
+    count: "font-display shrink-0 text-xl font-extrabold leading-none text-rose transition-colors group-hover:text-white group-focus-visible:text-white",
+  },
+  "Normal / Uncategorized": {
+    link: "group relative flex items-center gap-4 rounded-2xl bg-surface-tint p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5",
+    icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-text-secondary",
+    title: "font-display text-[15px] font-bold leading-tight text-text-secondary",
+    subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground",
+    senders: "mt-1 truncate text-xs text-text-secondary",
+    count: "font-display shrink-0 text-xl font-extrabold leading-none text-text-secondary",
+  },
+};
+
+const CHEVRON_CLASS =
+  "h-4 w-4 shrink-0 text-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-white group-focus-visible:translate-x-0.5 group-focus-visible:text-white";
 
 function senderLine(names: string[], total: number): string | null {
   if (names.length === 0) return null;
@@ -82,25 +142,23 @@ export function GlanceTiles({
   categoryCounts: Record<CategoryValue, number>;
   categorySenderPreviews: Record<string, string[]>;
 }) {
+  const needsAttentionPreview = senderLine(needsYouSenderPreview, needsYouCount);
+
   return (
     <div className="mb-6 flex flex-col gap-2.5">
       <Link
-        href={{ pathname: "/dashboard/all", query: { filter: "Needs You" } }}
-        className="group flex items-center gap-4 rounded-2xl bg-gradient-to-r from-accent to-accent-hover p-4 text-white shadow-glow transition-transform hover:-translate-y-0.5"
+        href={{ pathname: "/dashboard/all", query: { filter: "Needs Your Attention" } }}
+        className={NEEDS_ATTENTION_STYLE.link}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/20">
-          <div className="h-[18px] w-[18px]">{NEEDS_YOU_ICON}</div>
+        <div className={NEEDS_ATTENTION_STYLE.icon}>
+          <div className="h-[18px] w-[18px]">{NEEDS_ATTENTION_ICON}</div>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-display text-[15px] font-bold leading-tight">Needs You</p>
-          <p className="text-xs opacity-90">{NEEDS_YOU_SUBTITLE}</p>
-          {senderLine(needsYouSenderPreview, needsYouCount) && (
-            <p className="mt-0.5 truncate text-[11px] italic opacity-75">
-              {senderLine(needsYouSenderPreview, needsYouCount)}
-            </p>
-          )}
+          <p className={NEEDS_ATTENTION_STYLE.title}>Needs Your Attention</p>
+          <p className={NEEDS_ATTENTION_STYLE.subtitle}>{NEEDS_ATTENTION_SUBTITLE}</p>
+          {needsAttentionPreview && <p className={NEEDS_ATTENTION_STYLE.senders}>{needsAttentionPreview}</p>}
         </div>
-        <span className="font-display shrink-0 text-2xl font-extrabold leading-none">{needsYouCount}</span>
+        <span className={NEEDS_ATTENTION_STYLE.count}>{needsYouCount}</span>
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -108,7 +166,7 @@ export function GlanceTiles({
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="h-4 w-4 shrink-0 opacity-70 transition-transform group-hover:translate-x-0.5"
+          className={CHEVRON_CLASS}
           aria-hidden="true"
         >
           <path d="M9 6l6 6-6 6" />
@@ -119,21 +177,18 @@ export function GlanceTiles({
         const count = categoryCounts[value] ?? 0;
         const preview = senderLine(categorySenderPreviews[value] ?? [], count);
         const label = CATEGORY_DISPLAY_NAMES[value];
+        const style = CATEGORY_STYLES[value];
         return (
-          <Link
-            key={value}
-            href={{ pathname: "/dashboard/all", query: { filter: label } }}
-            className="group flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-transform hover:-translate-y-0.5"
-          >
-            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${CATEGORY_ICON_CLASSES[value]}`}>
+          <Link key={value} href={{ pathname: "/dashboard/all", query: { filter: label } }} className={style.link}>
+            <div className={style.icon}>
               <div className="h-[18px] w-[18px]">{CATEGORY_ICONS[value]}</div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-display text-[15px] font-bold leading-tight text-foreground">{label}</p>
-              <p className="text-xs text-text-secondary">{CATEGORY_SUBTITLES[value]}</p>
-              {preview && <p className="mt-0.5 truncate text-[11px] italic text-text-secondary opacity-80">{preview}</p>}
+              <p className={style.title}>{label}</p>
+              <p className={style.subtitle}>{CATEGORY_SUBTITLES[value]}</p>
+              {preview && <p className={style.senders}>{preview}</p>}
             </div>
-            <span className="font-display shrink-0 text-2xl font-extrabold leading-none text-foreground">{count}</span>
+            <span className={style.count}>{count}</span>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -141,7 +196,7 @@ export function GlanceTiles({
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-4 w-4 shrink-0 text-text-secondary transition-transform group-hover:translate-x-0.5"
+              className={CHEVRON_CLASS}
               aria-hidden="true"
             >
               <path d="M9 6l6 6-6 6" />

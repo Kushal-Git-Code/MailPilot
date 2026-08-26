@@ -24,7 +24,7 @@ export interface AllEmailsItem {
 // just the fixed set the AI originally shipped with.
 type FilterOption = string;
 
-const DEFAULT_FILTER_OPTIONS = ["All", "Needs You", "Primary", "Alerts", "Newsletters", "Transactional", "Other"];
+const DEFAULT_FILTER_OPTIONS = ["All", "Needs Your Attention", "Primary", "Alerts", "Newsletters", "Transactional", "Other"];
 const DEFAULT_INTERNAL_CATEGORIES = ["Human", "Notification", "Newsletter", "Transactional"];
 
 // Same color language as the dashboard's glance rows and PriorityList's
@@ -33,7 +33,7 @@ const DEFAULT_INTERNAL_CATEGORIES = ["Human", "Notification", "Newsletter", "Tra
 // why it read as "dull" next to the rest of the app.
 const FILTER_ACTIVE_CLASSES: Record<string, string> = {
   All: "bg-foreground text-white",
-  "Needs You": "bg-gradient-to-r from-accent to-accent-hover text-white",
+  "Needs Your Attention": "bg-gradient-to-r from-accent to-accent-hover text-white",
   Primary: "bg-success text-white",
   Alerts: "bg-sky text-white",
   Newsletters: "bg-gold text-white",
@@ -44,7 +44,7 @@ const FILTER_ACTIVE_FALLBACK = "bg-violet text-white"; // custom categories
 
 const BUCKET_BADGE_CLASSES: Record<string, string> = {
   All: "bg-surface-tint text-text-secondary",
-  "Needs You": "bg-accent/10 text-accent-hover",
+  "Needs Your Attention": "bg-accent/10 text-accent-hover",
   Primary: "bg-success/10 text-success",
   Alerts: "bg-sky/10 text-sky",
   Newsletters: "bg-gold/15 text-gold",
@@ -63,7 +63,7 @@ function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): stri
   // label that can contradict the tab you're looking at. Only "All" falls
   // back to the priority-first label, since there's no single tab to match.
   if (activeFilter !== "All") return activeFilter;
-  if (item.priorityFlagged) return "Needs You";
+  if (item.priorityFlagged) return "Needs Your Attention";
   switch (item.category) {
     case "Human":
       return "Primary";
@@ -85,7 +85,7 @@ function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
   switch (filter) {
     case "All":
       return true;
-    case "Needs You":
+    case "Needs Your Attention":
       return item.priorityFlagged;
     case "Primary":
       return item.category === "Human";
