@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getGmailClientForUser } from "@/lib/gmail";
 import { getEmailDisplayInfo } from "@/lib/gmailDisplay";
 import { getUndoableEmailIds } from "@/lib/undoability";
-import { LogoutButton } from "../logout-button";
 import { AllEmailsList, type AllEmailsItem } from "./all-list";
 
 // This page's data (classifications, corrections, undo availability) can
@@ -11,7 +10,11 @@ import { AllEmailsList, type AllEmailsItem } from "./all-list";
 // server-rendered response here.
 export const dynamic = "force-dynamic";
 
-export default async function AllEmailsPage() {
+export default async function AllEmailsPage({
+  searchParams,
+}: {
+  searchParams: { filter?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
@@ -112,27 +115,14 @@ export default async function AllEmailsPage() {
       <div className="blob blob-2 -bottom-24 -right-10 h-80 w-80 bg-tertiary opacity-20" />
 
       <div className="relative z-10 mx-auto max-w-2xl">
-        <header className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="font-display text-xl font-bold text-foreground">All Mail</h1>
-            <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
-              &larr; Back to Needs You
-            </Link>
-            {emails.length === MAX_EMAILS && (
-              <p className="mt-1 text-xs text-text-secondary">Showing your most recent {MAX_EMAILS}</p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <form action="/api/gmail/disconnect" method="POST">
-              <button
-                type="submit"
-                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-background"
-              >
-                Disconnect Gmail
-              </button>
-            </form>
-            <LogoutButton />
-          </div>
+        <header className="mb-6">
+          <h1 className="font-display text-xl font-bold text-foreground">All Mail</h1>
+          <Link href="/dashboard" className="text-xs font-medium text-accent hover:underline">
+            &larr; Back to Inbox
+          </Link>
+          {emails.length === MAX_EMAILS && (
+            <p className="mt-1 text-xs text-text-secondary">Showing your most recent {MAX_EMAILS}</p>
+          )}
         </header>
 
         {items.length === 0 ? (
@@ -143,7 +133,7 @@ export default async function AllEmailsPage() {
             </p>
           </div>
         ) : (
-          <AllEmailsList items={items} customCategories={customCategories} />
+          <AllEmailsList items={items} customCategories={customCategories} initialFilter={searchParams.filter} />
         )}
       </div>
     </main>
