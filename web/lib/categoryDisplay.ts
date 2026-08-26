@@ -37,12 +37,3 @@ export const CATEGORY_BADGE_CLASSES: Record<CategoryValue, string> = {
   Transactional: "bg-rose/10 text-rose",
   "Normal / Uncategorized": "bg-surface-tint text-text-secondary",
 };
-
-// The dashboard's at-a-glance tiles skip the uncategorized catch-all --
-// showing it as its own tile surfaces classifier uncertainty as if it were
-// a meaningful bucket to act on, which it isn't. Browse all mail and Step
-// 32's custom-category filters still use the full CATEGORY_VALUES list;
-// this exclusion is specific to the glance tiles' own display decision.
-export const GLANCE_CATEGORY_VALUES = CATEGORY_VALUES.filter(
-  (value) => value !== "Normal / Uncategorized"
-);

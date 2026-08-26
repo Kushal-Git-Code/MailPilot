@@ -26,11 +26,17 @@ export interface AllEmailsItem {
 // just the fixed set the AI originally shipped with.
 type FilterOption = string;
 
+// FYI Only mirrors the dashboard's fourth row exactly (everything not
+// priority-flagged, regardless of category) -- the individual category
+// tabs after it (Primary/Alerts/Newsletters/Transactional/Other) are extra
+// granularity this page offers for browsing/correcting that the dashboard
+// deliberately doesn't surface as separate rows anymore.
 const DEFAULT_FILTER_OPTIONS = [
   "All",
   "Has Deadlines",
   "Quick Replies",
   "Needs Your Attention",
+  "FYI Only",
   "Primary",
   "Alerts",
   "Newsletters",
@@ -51,6 +57,7 @@ const FILTER_ACTIVE_CLASSES: Record<string, string> = {
   "Has Deadlines": "bg-gradient-to-r from-accent to-accent-hover text-white",
   "Quick Replies": "bg-gradient-to-r from-accent to-accent-hover text-white",
   "Needs Your Attention": "bg-gradient-to-r from-accent to-accent-hover text-white",
+  "FYI Only": "bg-text-secondary text-white",
   Primary: "bg-success text-white",
   Alerts: "bg-sky text-white",
   Newsletters: "bg-gold text-white",
@@ -64,6 +71,7 @@ const BUCKET_BADGE_CLASSES: Record<string, string> = {
   "Has Deadlines": "bg-accent/10 text-accent-hover",
   "Quick Replies": "bg-accent/10 text-accent-hover",
   "Needs Your Attention": "bg-accent/10 text-accent-hover",
+  "FYI Only": "bg-surface-tint text-text-secondary",
   Primary: "bg-success/10 text-success",
   Alerts: "bg-sky/10 text-sky",
   Newsletters: "bg-gold/15 text-gold",
@@ -113,10 +121,9 @@ function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): stri
 // priority-flagged email counts only under exactly one of Has Deadlines /
 // Quick Replies / Needs Your Attention (precedence in priorityBucketFor),
 // and never also under its category tab, same exclusive-bucket rule as the
-// dashboard's glance rows (dashboard/page.tsx, categorySenderPreviews.ts).
-// Matches Tame's actual behavior (their own numbers sum to their total);
-// previously an email could match two tabs at once, which is why the
-// counts didn't add up.
+// dashboard's glance rows (dashboard/page.tsx). Matches Tame's actual
+// behavior (their own numbers sum to their total); previously an email
+// could match two tabs at once, which is why the counts didn't add up.
 function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
   switch (filter) {
     case "All":
@@ -127,6 +134,8 @@ function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
       return item.priorityFlagged && !item.hasDeadline && item.quickReplyCandidate;
     case "Needs Your Attention":
       return item.priorityFlagged && !item.hasDeadline && !item.quickReplyCandidate;
+    case "FYI Only":
+      return !item.priorityFlagged;
     case "Primary":
       return item.category === "Human" && !item.priorityFlagged;
     case "Alerts":
