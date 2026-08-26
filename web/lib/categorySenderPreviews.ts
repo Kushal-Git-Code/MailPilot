@@ -19,11 +19,15 @@ export async function getCategorySenderPreviews(
 ): Promise<Record<string, string[]>> {
   const perCategoryIds = await Promise.all(
     categories.map(async (value) => {
+      // Excludes priority-flagged emails, same exclusive-bucket rule as the
+      // count query in dashboard/page.tsx -- a priority-flagged email's
+      // sender should only ever show up under Needs Your Attention.
       const { data } = await supabase
         .from("emails")
         .select("gmail_message_id")
         .eq("user_id", userId)
         .eq("category", value)
+        .eq("priority_flagged", false)
         .order("received_at", { ascending: false })
         .limit(SAMPLES_PER_CATEGORY);
       return [value, (data ?? []).map((row) => row.gmail_message_id as string)] as const;

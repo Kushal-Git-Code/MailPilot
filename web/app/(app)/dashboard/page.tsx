@@ -90,13 +90,17 @@ export default async function DashboardPage() {
       // handful of lightweight queries running concurrently, not one heavy
       // one. Uncategorized is deliberately excluded (GLANCE_CATEGORY_VALUES)
       // -- see the comment there for why.
+      // Excludes priority-flagged emails -- an email counts in exactly one
+      // glance row now, never both. A priority-flagged Alert shows only
+      // under Needs Your Attention, not double-counted here too.
       Promise.all(
         GLANCE_CATEGORY_VALUES.map(async (value) => {
           const { count } = await supabase
             .from("emails")
             .select("id", { count: "exact", head: true })
             .eq("user_id", user.id)
-            .eq("category", value);
+            .eq("category", value)
+            .eq("priority_flagged", false);
           return [value, count ?? 0] as const;
         })
       ),

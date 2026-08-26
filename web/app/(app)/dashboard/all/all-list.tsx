@@ -81,6 +81,12 @@ function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): stri
   }
 }
 
+// Every non-"All" tab is mutually exclusive with every other one -- a
+// priority-flagged email counts only under "Needs Your Attention" and
+// nowhere else, same exclusive-bucket rule as the dashboard's glance rows
+// (dashboard/page.tsx, categorySenderPreviews.ts). Matches Tame's actual
+// behavior (their own numbers sum to their total); previously an email
+// could match two tabs at once, which is why the counts didn't add up.
 function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
   switch (filter) {
     case "All":
@@ -88,18 +94,18 @@ function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
     case "Needs Your Attention":
       return item.priorityFlagged;
     case "Primary":
-      return item.category === "Human";
+      return item.category === "Human" && !item.priorityFlagged;
     case "Alerts":
-      return item.category === "Notification";
+      return item.category === "Notification" && !item.priorityFlagged;
     case "Newsletters":
-      return item.category === "Newsletter";
+      return item.category === "Newsletter" && !item.priorityFlagged;
     case "Transactional":
-      return item.category === "Transactional";
+      return item.category === "Transactional" && !item.priorityFlagged;
     case "Other":
-      return !DEFAULT_INTERNAL_CATEGORIES.includes(item.category ?? "");
+      return !DEFAULT_INTERNAL_CATEGORIES.includes(item.category ?? "") && !item.priorityFlagged;
     default:
       // A custom category filter — match by the exact category name.
-      return item.category === filter;
+      return item.category === filter && !item.priorityFlagged;
   }
 }
 
