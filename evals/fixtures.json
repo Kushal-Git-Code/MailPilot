@@ -200,6 +200,69 @@
     "subject": "Your login code",
     "from": "no-reply@someapp.com",
     "body": "Here is your one-time login code: 118204. Enter this on the sign-in screen to continue.",
-    "expected": { "priority": true, "category": "Notification" }
+    "expected": { "priority": true, "category": "Notification", "hasDeadline": false, "quickReplyCandidate": false }
+  },
+  {
+    "id": "signal-quick-reply-yesno-1",
+    "subject": "Free for a call at 3pm today?",
+    "from": "Priya Shah <priya.shah@acmeco.com>",
+    "body": "Quick one — are you free for a call at 3pm today? Just need a yes or no, happy to move it if not.",
+    "expected": { "priority": true, "category": "Human", "hasDeadline": false, "quickReplyCandidate": true }
+  },
+  {
+    "id": "signal-not-quick-needs-deliverable-1",
+    "subject": "Can you put together the vendor comparison doc?",
+    "from": "Dana Ruiz <dana@partnerfirm.com>",
+    "body": "Could you pull together a comparison doc for the three vendors we discussed, with pricing and pros/cons for each? Want to review it before we decide.",
+    "expected": { "priority": true, "category": "Human", "hasDeadline": false, "quickReplyCandidate": false }
+  },
+  {
+    "id": "signal-deadline-automated-no-reply-1",
+    "subject": "Renew your domain by September 1 or lose it",
+    "from": "Registrar <billing@domainregistrar.com>",
+    "body": "Your domain registration expires on September 1. Renew before then to avoid losing it — after expiry, domains are released and can be registered by anyone.",
+    "expected": { "priority": true, "category": "Transactional", "hasDeadline": true, "quickReplyCandidate": false }
+  },
+  {
+    "id": "signal-open-ended-no-deadline-not-quick-1",
+    "subject": "Thoughts on the new logo?",
+    "from": "Jordan Lee <jordan.lee@company.io>",
+    "body": "What do you think of the new logo direction? Would love your honest take and any suggestions for improving it before we finalize — no rush on this.",
+    "expected": { "priority": true, "category": "Human", "hasDeadline": false, "quickReplyCandidate": false }
+  },
+  {
+    "id": "signal-both-true-1",
+    "subject": "Coming to the 2pm? Need headcount by noon",
+    "from": "Marcus Webb <marcus.webb@company.io>",
+    "body": "Can you confirm you're coming to the 2pm meeting? I need a final headcount by noon to book the room size.",
+    "expected": { "priority": true, "category": "Human", "hasDeadline": true, "quickReplyCandidate": true }
+  },
+  {
+    "id": "signal-both-false-newsletter-1",
+    "subject": "5 productivity tips for your week",
+    "from": "Weekly Digest <digest@productivityhub.com>",
+    "body": "This week: 5 tips for a more productive week, a reader Q&A, and our favorite tools roundup. Read on when you have a few minutes.",
+    "expected": { "priority": false, "category": "Newsletter", "hasDeadline": false, "quickReplyCandidate": false }
+  },
+  {
+    "id": "signal-quick-true-deadline-false-casual-1",
+    "subject": "Coffee this week?",
+    "from": "Sam Okafor <sam.okafor@gmail.com>",
+    "body": "Any chance you're free for coffee sometime this week? No rush at all, just let me know if/when works.",
+    "expected": { "priority": true, "category": "Human", "hasDeadline": false, "quickReplyCandidate": true }
+  },
+  {
+    "id": "signal-deadline-true-quick-false-contract-1",
+    "subject": "Contract renewal needs your review by Friday",
+    "from": "Account Manager <renewals@vendorcorp.com>",
+    "body": "Your contract renewal needs a decision by Friday. Please review the attached updated terms and let us know your thoughts before we finalize.",
+    "expected": { "priority": true, "category": "Human", "hasDeadline": true, "quickReplyCandidate": false }
+  },
+  {
+    "id": "signal-transactional-deadline-1",
+    "subject": "Invoice #INV-3310 due in 2 days",
+    "from": "billing@vendorcompany.com",
+    "body": "This is a reminder that invoice #INV-3310 for $890.00 is due in 2 days. Please arrange payment to avoid a late fee.",
+    "expected": { "priority": true, "category": "Transactional", "hasDeadline": true, "quickReplyCandidate": false }
   }
 ]

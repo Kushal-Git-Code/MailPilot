@@ -22,6 +22,8 @@ export async function persistClassification(
         gmail_thread_id: params.gmailThreadId,
         priority_flagged: params.classification.priority,
         category: params.classification.category,
+        has_deadline: params.classification.hasDeadline,
+        quick_reply_candidate: params.classification.quickReplyCandidate,
         classification_reason: params.classification.reason,
         confidence: params.classification.confidence ?? null,
         processed_at: new Date().toISOString(),

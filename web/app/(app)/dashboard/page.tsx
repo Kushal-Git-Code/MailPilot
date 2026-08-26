@@ -43,7 +43,7 @@ export default async function DashboardPage() {
     getGmailClientForUser(user.id),
     supabase
       .from("emails")
-      .select("id, gmail_message_id")
+      .select("id, gmail_message_id, has_deadline, quick_reply_candidate")
       .eq("user_id", user.id)
       .eq("priority_flagged", true)
       .order("received_at", { ascending: false }),
@@ -70,29 +70,42 @@ export default async function DashboardPage() {
     );
   }
 
-  const emails = flaggedEmails ?? [];
-  const needsYouCount = emails.length;
-  // Only the first few need real Gmail lookups -- the row shows a max of 3
-  // sample senders, no reason to fetch display info for the rest here (the
-  // full list, and everyone's sender names, live on /dashboard/all).
-  const needsYouPreviewIds = emails.slice(0, 3).map((e) => e.gmail_message_id);
+  // Precedence for priority-flagged mail, matching Tame's action-oriented
+  // buckets rather than one undifferentiated pile: Has Deadlines first (a
+  // missed deadline has a real cost, so it must never get buried behind an
+  // easier-looking Quick Reply), then Quick Replies (the easy wins that
+  // aren't also deadline-critical), then Needs Your Attention (everything
+  // else needing real judgment -- no shortcut, no clock).
+  const allFlagged = flaggedEmails ?? [];
+  const deadlineEmails = allFlagged.filter((e) => e.has_deadline);
+  const quickReplyEmails = allFlagged.filter((e) => !e.has_deadline && e.quick_reply_candidate);
+  const needsAttentionEmails = allFlagged.filter((e) => !e.has_deadline && !e.quick_reply_candidate);
+
+  // Only the first few of each bucket need real Gmail lookups -- each row
+  // shows a max of 3 sample senders, no reason to fetch display info for
+  // the rest here (the full list, and everyone's sender names, live on
+  // /dashboard/all). One combined Gmail call for all three buckets' samples
+  // instead of three separate round trips.
+  const previewIdsFor = (list: typeof allFlagged) => list.slice(0, 3).map((e) => e.gmail_message_id);
+  const deadlinePreviewIds = previewIdsFor(deadlineEmails);
+  const quickReplyPreviewIds = previewIdsFor(quickReplyEmails);
+  const needsAttentionPreviewIds = previewIdsFor(needsAttentionEmails);
+  const allPreviewIds = [...deadlinePreviewIds, ...quickReplyPreviewIds, ...needsAttentionPreviewIds];
 
   // None of these depend on each other's results — see the comment on each
   // for what it needs. Running them as sequential awaits was several round
   // trips stacked back to back for no reason; Promise.all collapses that
   // to one.
-  const [needsYouDisplayMap, latestSession, scanning, categoryCountEntries, categorySenderPreviews] =
+  const [priorityDisplayMap, latestSession, scanning, categoryCountEntries, categorySenderPreviews] =
     await Promise.all([
-      needsYouPreviewIds.length > 0 ? getEmailDisplayInfo(gmail, needsYouPreviewIds) : Promise.resolve(new Map()),
+      allPreviewIds.length > 0 ? getEmailDisplayInfo(gmail, allPreviewIds) : Promise.resolve(new Map()),
       getLatestSession(supabase, user.id),
       hasActiveBacklogJob(supabase, user.id),
       // head:true means each of these is a count only, no rows fetched — a
       // handful of lightweight queries running concurrently, not one heavy
       // one. Uncategorized is deliberately excluded (GLANCE_CATEGORY_VALUES)
-      // -- see the comment there for why.
-      // Excludes priority-flagged emails -- an email counts in exactly one
-      // glance row now, never both. A priority-flagged Alert shows only
-      // under Needs Your Attention, not double-counted here too.
+      // -- see the comment there for why. Excludes priority-flagged emails
+      // -- an email counts in exactly one glance row now, never both.
       Promise.all(
         GLANCE_CATEGORY_VALUES.map(async (value) => {
           const { count } = await supabase
@@ -112,9 +125,9 @@ export default async function DashboardPage() {
   const categoryCounts = Object.fromEntries(categoryCountEntries) as Record<CategoryValue, number>;
   const displayName = (user.user_metadata?.full_name as string | undefined) ?? user.email ?? "";
   const firstName = firstNameFrom(displayName);
-  const needsYouSenderPreview = needsYouPreviewIds.map((id) =>
-    displayNameFromHeader(needsYouDisplayMap.get(id)?.from ?? "(unknown sender)")
-  );
+
+  const senderPreviewFor = (ids: string[]) =>
+    ids.map((id) => displayNameFromHeader(priorityDisplayMap.get(id)?.from ?? "(unknown sender)"));
 
   return (
     <main className="relative min-h-screen overflow-hidden p-8">
@@ -134,8 +147,12 @@ export default async function DashboardPage() {
         <ScanProgressBanner initiallyActive={scanning} />
 
         <GlanceTiles
-          needsYouCount={needsYouCount}
-          needsYouSenderPreview={needsYouSenderPreview}
+          deadlineCount={deadlineEmails.length}
+          deadlineSenderPreview={senderPreviewFor(deadlinePreviewIds)}
+          quickReplyCount={quickReplyEmails.length}
+          quickReplySenderPreview={senderPreviewFor(quickReplyPreviewIds)}
+          needsAttentionCount={needsAttentionEmails.length}
+          needsAttentionSenderPreview={senderPreviewFor(needsAttentionPreviewIds)}
           categoryCounts={categoryCounts}
           categorySenderPreviews={categorySenderPreviews}
         />

@@ -3,9 +3,9 @@ import { GLANCE_CATEGORY_VALUES, CATEGORY_DISPLAY_NAMES, type CategoryValue } fr
 
 // One line per row on what to actually do with it, not just what it is --
 // design-review takeaway from comparing against Tame's category view. The
-// Needs Your Attention subtitle was originally "Only you can handle these"
-// (too close to a direct lift from Tame's own copy) -- replaced with
-// original wording after a design discussion.
+// three priority rows below split what used to be one undifferentiated
+// "Needs Your Attention" bucket, using the classifier's hasDeadline/
+// quickReplyCandidate signals (validated via /evals before shipping).
 const CATEGORY_SUBTITLES: Record<CategoryValue, string> = {
   Human: "Real people, nothing urgent",
   Notification: "Security & account alerts",
@@ -13,6 +13,8 @@ const CATEGORY_SUBTITLES: Record<CategoryValue, string> = {
   Transactional: "Receipts, shipping, orders",
   "Normal / Uncategorized": "",
 };
+const DEADLINE_SUBTITLE = "Miss these and there's a real cost";
+const QUICK_REPLY_SUBTITLE = "A one-line answer closes these out";
 const NEEDS_ATTENTION_SUBTITLE = "These are waiting on you";
 
 const CATEGORY_ICONS: Record<CategoryValue, JSX.Element> = {
@@ -48,6 +50,18 @@ const CATEGORY_ICONS: Record<CategoryValue, JSX.Element> = {
     </svg>
   ),
 };
+const DEADLINE_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9v4l2.5 2.5" />
+    <path d="M9 2h6" />
+  </svg>
+);
+const QUICK_REPLY_ICON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
+  </svg>
+);
 const NEEDS_ATTENTION_ICON = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9.5 2a5.5 5.5 0 0 0-3 10.1V16a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v-3.9A5.5 5.5 0 0 0 9.5 2Z" />
@@ -70,12 +84,19 @@ interface RowStyle {
   count: string;
 }
 
-const NEEDS_ATTENTION_STYLE: RowStyle = {
+// The three priority rows all share the same coral family, deliberately --
+// color here means "something in your priority mail needs a decision from
+// you," distinguished from each other by icon/label/position, not hue.
+// Category rows below get their own distinct hues, reserved for "what kind
+// of mail is this" -- keeping the two color families from colliding in
+// meaning (see the earlier CategoryCorrectionSelect badge-vs-control fix
+// for the same reasoning applied elsewhere).
+const PRIORITY_ROW_STYLE: RowStyle = {
   link: "group relative flex items-center gap-4 rounded-2xl bg-accent/10 p-4 shadow-[0_4px_14px_rgba(27,42,74,0.06)] transition-all hover:-translate-y-0.5 hover:bg-gradient-to-r hover:from-accent hover:to-accent-hover hover:shadow-glow focus-visible:-translate-y-0.5 focus-visible:bg-gradient-to-r focus-visible:from-accent focus-visible:to-accent-hover focus-visible:shadow-glow focus-visible:outline-none",
   icon: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/20 text-accent-hover transition-colors group-hover:bg-white/25 group-hover:text-white group-focus-visible:bg-white/25 group-focus-visible:text-white",
   title: "font-display text-[15px] font-bold leading-tight text-accent-hover transition-colors group-hover:text-white group-focus-visible:text-white",
-  subtitle: "mt-0.5 text-[13.5px] font-semibold text-foreground transition-colors group-hover:text-white group-focus-visible:text-white",
-  senders: "mt-1 truncate text-xs text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
+  subtitle: "mt-0.5 text-[12.5px] font-medium text-[#3c4a68] transition-colors group-hover:text-white group-focus-visible:text-white",
+  senders: "mt-1 truncate text-[11.5px] font-semibold text-text-secondary transition-colors group-hover:text-white/90 group-focus-visible:text-white/90",
   count: "font-display shrink-0 text-xl font-extrabold leading-none text-accent-hover transition-colors group-hover:text-white group-focus-visible:text-white",
 };
 
@@ -131,47 +152,94 @@ function senderLine(names: string[], total: number): string | null {
   return `From: ${names.join(", ")}${remaining > 0 ? `, +${remaining} more` : ""}`;
 }
 
+function PriorityRow({
+  filter,
+  icon,
+  title,
+  subtitle,
+  count,
+  senderPreview,
+}: {
+  filter: string;
+  icon: JSX.Element;
+  title: string;
+  subtitle: string;
+  count: number;
+  senderPreview: string[];
+}) {
+  const preview = senderLine(senderPreview, count);
+  return (
+    <Link href={{ pathname: "/dashboard/all", query: { filter } }} className={PRIORITY_ROW_STYLE.link}>
+      <div className={PRIORITY_ROW_STYLE.icon}>
+        <div className="h-[18px] w-[18px]">{icon}</div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className={PRIORITY_ROW_STYLE.title}>{title}</p>
+        <p className={PRIORITY_ROW_STYLE.subtitle}>{subtitle}</p>
+        {preview && <p className={PRIORITY_ROW_STYLE.senders}>{preview}</p>}
+      </div>
+      <span className={PRIORITY_ROW_STYLE.count}>{count}</span>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={CHEVRON_CLASS}
+        aria-hidden="true"
+      >
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </Link>
+  );
+}
+
 export function GlanceTiles({
-  needsYouCount,
-  needsYouSenderPreview,
+  deadlineCount,
+  deadlineSenderPreview,
+  quickReplyCount,
+  quickReplySenderPreview,
+  needsAttentionCount,
+  needsAttentionSenderPreview,
   categoryCounts,
   categorySenderPreviews,
 }: {
-  needsYouCount: number;
-  needsYouSenderPreview: string[];
+  deadlineCount: number;
+  deadlineSenderPreview: string[];
+  quickReplyCount: number;
+  quickReplySenderPreview: string[];
+  needsAttentionCount: number;
+  needsAttentionSenderPreview: string[];
   categoryCounts: Record<CategoryValue, number>;
   categorySenderPreviews: Record<string, string[]>;
 }) {
-  const needsAttentionPreview = senderLine(needsYouSenderPreview, needsYouCount);
-
   return (
     <div className="mb-6 flex flex-col gap-2.5">
-      <Link
-        href={{ pathname: "/dashboard/all", query: { filter: "Needs Your Attention" } }}
-        className={NEEDS_ATTENTION_STYLE.link}
-      >
-        <div className={NEEDS_ATTENTION_STYLE.icon}>
-          <div className="h-[18px] w-[18px]">{NEEDS_ATTENTION_ICON}</div>
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className={NEEDS_ATTENTION_STYLE.title}>Needs Your Attention</p>
-          <p className={NEEDS_ATTENTION_STYLE.subtitle}>{NEEDS_ATTENTION_SUBTITLE}</p>
-          {needsAttentionPreview && <p className={NEEDS_ATTENTION_STYLE.senders}>{needsAttentionPreview}</p>}
-        </div>
-        <span className={NEEDS_ATTENTION_STYLE.count}>{needsYouCount}</span>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={CHEVRON_CLASS}
-          aria-hidden="true"
-        >
-          <path d="M9 6l6 6-6 6" />
-        </svg>
-      </Link>
+      <PriorityRow
+        filter="Has Deadlines"
+        icon={DEADLINE_ICON}
+        title="Has Deadlines"
+        subtitle={DEADLINE_SUBTITLE}
+        count={deadlineCount}
+        senderPreview={deadlineSenderPreview}
+      />
+      <PriorityRow
+        filter="Quick Replies"
+        icon={QUICK_REPLY_ICON}
+        title="Quick Replies"
+        subtitle={QUICK_REPLY_SUBTITLE}
+        count={quickReplyCount}
+        senderPreview={quickReplySenderPreview}
+      />
+      <PriorityRow
+        filter="Needs Your Attention"
+        icon={NEEDS_ATTENTION_ICON}
+        title="Needs Your Attention"
+        subtitle={NEEDS_ATTENTION_SUBTITLE}
+        count={needsAttentionCount}
+        senderPreview={needsAttentionSenderPreview}
+      />
 
       {GLANCE_CATEGORY_VALUES.map((value) => {
         const count = categoryCounts[value] ?? 0;

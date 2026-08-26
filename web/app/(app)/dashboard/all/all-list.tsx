@@ -16,6 +16,8 @@ export interface AllEmailsItem {
   receivedAt: string;
   category: string | null;
   priorityFlagged: boolean;
+  hasDeadline: boolean;
+  quickReplyCandidate: boolean;
   undoable: boolean;
 }
 
@@ -24,15 +26,30 @@ export interface AllEmailsItem {
 // just the fixed set the AI originally shipped with.
 type FilterOption = string;
 
-const DEFAULT_FILTER_OPTIONS = ["All", "Needs Your Attention", "Primary", "Alerts", "Newsletters", "Transactional", "Other"];
+const DEFAULT_FILTER_OPTIONS = [
+  "All",
+  "Has Deadlines",
+  "Quick Replies",
+  "Needs Your Attention",
+  "Primary",
+  "Alerts",
+  "Newsletters",
+  "Transactional",
+  "Other",
+];
 const DEFAULT_INTERNAL_CATEGORIES = ["Human", "Notification", "Newsletter", "Transactional"];
 
 // Same color language as the dashboard's glance rows and PriorityList's
 // badges (CATEGORY_BADGE_CLASSES, lib/categoryDisplay.ts) — this page was
 // the one place still showing every bucket in flat grey, which is most of
-// why it read as "dull" next to the rest of the app.
+// why it read as "dull" next to the rest of the app. The three priority
+// buckets share the coral family on purpose, same reasoning as the
+// dashboard rows (glance-tiles.tsx) — color means "needs a decision from
+// you" here, distinguished by label, not hue.
 const FILTER_ACTIVE_CLASSES: Record<string, string> = {
   All: "bg-foreground text-white",
+  "Has Deadlines": "bg-gradient-to-r from-accent to-accent-hover text-white",
+  "Quick Replies": "bg-gradient-to-r from-accent to-accent-hover text-white",
   "Needs Your Attention": "bg-gradient-to-r from-accent to-accent-hover text-white",
   Primary: "bg-success text-white",
   Alerts: "bg-sky text-white",
@@ -44,6 +61,8 @@ const FILTER_ACTIVE_FALLBACK = "bg-violet text-white"; // custom categories
 
 const BUCKET_BADGE_CLASSES: Record<string, string> = {
   All: "bg-surface-tint text-text-secondary",
+  "Has Deadlines": "bg-accent/10 text-accent-hover",
+  "Quick Replies": "bg-accent/10 text-accent-hover",
   "Needs Your Attention": "bg-accent/10 text-accent-hover",
   Primary: "bg-success/10 text-success",
   Alerts: "bg-sky/10 text-sky",
@@ -57,13 +76,22 @@ const BUCKET_BADGE_FALLBACK = "border border-dashed border-violet text-violet"; 
 // map) so a color always means the same thing everywhere on this page --
 // they just also get a fully solid version for whichever one is active.
 
+// Same precedence as the dashboard rows (glance-tiles.tsx / dashboard/
+// page.tsx): a deadline's real cost if missed outranks a merely-easy quick
+// reply, which outranks the catch-all "needs real judgment" bucket.
+function priorityBucketFor(item: AllEmailsItem): string {
+  if (item.hasDeadline) return "Has Deadlines";
+  if (item.quickReplyCandidate) return "Quick Replies";
+  return "Needs Your Attention";
+}
+
 function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): string {
   // Under a specific tab, the badge must say why the item is in *that*
   // list (matching what you filtered for) — not a fixed priority-first
   // label that can contradict the tab you're looking at. Only "All" falls
   // back to the priority-first label, since there's no single tab to match.
   if (activeFilter !== "All") return activeFilter;
-  if (item.priorityFlagged) return "Needs Your Attention";
+  if (item.priorityFlagged) return priorityBucketFor(item);
   switch (item.category) {
     case "Human":
       return "Primary";
@@ -82,17 +110,23 @@ function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): stri
 }
 
 // Every non-"All" tab is mutually exclusive with every other one -- a
-// priority-flagged email counts only under "Needs Your Attention" and
-// nowhere else, same exclusive-bucket rule as the dashboard's glance rows
-// (dashboard/page.tsx, categorySenderPreviews.ts). Matches Tame's actual
-// behavior (their own numbers sum to their total); previously an email
-// could match two tabs at once, which is why the counts didn't add up.
+// priority-flagged email counts only under exactly one of Has Deadlines /
+// Quick Replies / Needs Your Attention (precedence in priorityBucketFor),
+// and never also under its category tab, same exclusive-bucket rule as the
+// dashboard's glance rows (dashboard/page.tsx, categorySenderPreviews.ts).
+// Matches Tame's actual behavior (their own numbers sum to their total);
+// previously an email could match two tabs at once, which is why the
+// counts didn't add up.
 function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
   switch (filter) {
     case "All":
       return true;
+    case "Has Deadlines":
+      return item.priorityFlagged && item.hasDeadline;
+    case "Quick Replies":
+      return item.priorityFlagged && !item.hasDeadline && item.quickReplyCandidate;
     case "Needs Your Attention":
-      return item.priorityFlagged;
+      return item.priorityFlagged && !item.hasDeadline && !item.quickReplyCandidate;
     case "Primary":
       return item.category === "Human" && !item.priorityFlagged;
     case "Alerts":

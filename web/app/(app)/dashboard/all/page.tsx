@@ -33,7 +33,9 @@ export default async function AllEmailsPage({
     getGmailClientForUser(user.id),
     supabase
       .from("emails")
-      .select("id, gmail_message_id, gmail_thread_id, classification_reason, category, priority_flagged, received_at")
+      .select(
+        "id, gmail_message_id, gmail_thread_id, classification_reason, category, priority_flagged, has_deadline, quick_reply_candidate, received_at"
+      )
       .eq("user_id", user.id)
       .order("received_at", { ascending: false })
       .limit(MAX_EMAILS),
@@ -112,6 +114,8 @@ export default async function AllEmailsPage({
       receivedAt: e.received_at,
       category: e.category,
       priorityFlagged: e.priority_flagged,
+      hasDeadline: e.has_deadline,
+      quickReplyCandidate: e.quick_reply_candidate,
       undoable: undoableIds.has(e.id),
     };
   });
