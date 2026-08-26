@@ -61,9 +61,10 @@ export function CategoryCorrectionSelect({
         type="button"
         onClick={() => setOpen((o) => !o)}
         disabled={loading}
-        className="flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface disabled:opacity-50"
+        className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:bg-surface disabled:opacity-50"
       >
-        {loading ? "..." : currentLabel}
+        <span className="opacity-60">Category:</span>
+        <span className="font-semibold text-foreground">{loading ? "..." : currentLabel}</span>
         <svg
           viewBox="0 0 24 24"
           fill="none"

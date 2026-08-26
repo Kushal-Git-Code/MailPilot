@@ -43,6 +43,7 @@ const FILTER_ACTIVE_CLASSES: Record<string, string> = {
 const FILTER_ACTIVE_FALLBACK = "bg-violet text-white"; // custom categories
 
 const BUCKET_BADGE_CLASSES: Record<string, string> = {
+  All: "bg-surface-tint text-text-secondary",
   "Needs You": "bg-accent/10 text-accent-hover",
   Primary: "bg-success/10 text-success",
   Alerts: "bg-sky/10 text-sky",
@@ -51,6 +52,10 @@ const BUCKET_BADGE_CLASSES: Record<string, string> = {
   Other: "bg-surface-tint text-text-secondary",
 };
 const BUCKET_BADGE_FALLBACK = "border border-dashed border-violet text-violet"; // custom categories
+
+// Filter pills reuse the exact same tint language as the badges above (same
+// map) so a color always means the same thing everywhere on this page --
+// they just also get a fully solid version for whichever one is active.
 
 function getDisplayBucket(item: AllEmailsItem, activeFilter: FilterOption): string {
   // Under a specific tab, the badge must say why the item is in *that*
@@ -98,19 +103,43 @@ function matchesFilter(item: AllEmailsItem, filter: FilterOption): boolean {
   }
 }
 
+// A hardcoded /u/0/ in a Gmail deep link opens whichever Google account
+// happens to be the browser's first-signed-in one, not necessarily the
+// connected account -- silently landing on that account's inbox instead of
+// the thread when they're not the same. Confirmed live: keeping /u/0/ in
+// the path *alongside* an authuser= query param still opened the wrong
+// account -- Google's routing honors the path segment over the query
+// string, so the two must never both be present. Dropping /u/0/ entirely
+// and resolving purely via authuser=<email> is the fix.
+function gmailThreadUrl(threadId: string, gmailAddress: string | null): string {
+  const auth = gmailAddress ? `?authuser=${encodeURIComponent(gmailAddress)}` : "";
+  return `https://mail.google.com/mail/${auth}#all/${threadId}`;
+}
+
 export function AllEmailsList({
   items,
   customCategories,
   initialFilter,
+  gmailAddress,
 }: {
   items: AllEmailsItem[];
   customCategories: string[];
   initialFilter?: string;
+  gmailAddress: string | null;
 }) {
   const filterOptions = useMemo(
     () => [...DEFAULT_FILTER_OPTIONS, ...customCategories],
     [customCategories]
   );
+  // Counts every pill against data already loaded for filtering -- no new
+  // fetch, just a second pass over `items` per option.
+  const filterCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const option of filterOptions) {
+      counts[option] = items.filter((item) => matchesFilter(item, option)).length;
+    }
+    return counts;
+  }, [items, filterOptions]);
   // Validated against the known set rather than trusted outright — this
   // comes from a URL query param (a dashboard row link), which is user-
   // editable and shouldn't be able to select a filter that doesn't exist.
@@ -127,16 +156,17 @@ export function AllEmailsList({
         {filterOptions.map((option) => {
           const isActive = filter === option;
           const activeClass = FILTER_ACTIVE_CLASSES[option] ?? FILTER_ACTIVE_FALLBACK;
+          const tintClass = BUCKET_BADGE_CLASSES[option] ?? BUCKET_BADGE_FALLBACK;
           return (
             <button
               key={option}
               type="button"
               onClick={() => setFilter(option)}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
-                isActive ? `${activeClass} shadow-glow` : "bg-surface text-text-secondary hover:bg-background"
+              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all hover:-translate-y-0.5 ${
+                isActive ? `${activeClass} shadow-glow` : tintClass
               }`}
             >
-              {option}
+              {option} <span className="opacity-70">({filterCounts[option] ?? 0})</span>
             </button>
           );
         })}
@@ -162,7 +192,7 @@ export function AllEmailsList({
               >
                 <div className="rounded-xl border border-border bg-surface p-5 shadow-glow transition-transform hover:-translate-y-0.5">
                   <a
-                    href={`https://mail.google.com/mail/u/0/#all/${item.gmailThreadId}`}
+                    href={gmailThreadUrl(item.gmailThreadId, gmailAddress)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex gap-3"

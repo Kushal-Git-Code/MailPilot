@@ -62,9 +62,10 @@ export default async function AllEmailsPage({
 
   const emails = allEmails ?? [];
 
-  // Display info, undoable-ids, and the custom-categories query are all
-  // independent of each other — same reasoning as dashboard/page.tsx.
-  const [displayMap, undoableIds, { data: categoryRules }] = await Promise.all([
+  // Display info, undoable-ids, the custom-categories query, and the
+  // connected Gmail address are all independent of each other — same
+  // reasoning as dashboard/page.tsx.
+  const [displayMap, undoableIds, { data: categoryRules }, { data: tokenRow }] = await Promise.all([
     emails.length > 0
       ? getEmailDisplayInfo(
           gmail,
@@ -88,6 +89,12 @@ export default async function AllEmailsPage({
       .eq("rule_type", "category_definition")
       .eq("active", true)
       .order("created_at", { ascending: true }),
+    // Needed to build "Open in Gmail" links that resolve to the right
+    // account even when it isn't the browser's first-signed-in Google
+    // account (a hardcoded /u/0/ silently opens whichever account IS in
+    // that slot, landing on its inbox instead of the thread -- the bug
+    // that was reported).
+    supabase.from("gmail_tokens").select("gmail_address").eq("user_id", user.id).maybeSingle(),
   ]);
 
   const customCategories = (categoryRules ?? [])
@@ -133,7 +140,12 @@ export default async function AllEmailsPage({
             </p>
           </div>
         ) : (
-          <AllEmailsList items={items} customCategories={customCategories} initialFilter={searchParams.filter} />
+          <AllEmailsList
+            items={items}
+            customCategories={customCategories}
+            initialFilter={searchParams.filter}
+            gmailAddress={tokenRow?.gmail_address ?? null}
+          />
         )}
       </div>
     </main>
